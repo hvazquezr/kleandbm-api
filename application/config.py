@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     cors_allow_methods: List[str]
     cors_allow_headers: List[str]
     api_prefix: str
+    kdsqldb_cluster: str
+    kdsqldb_key: str
+    kdsqldb_secret:str
 
     class Config:
         env_file = Path(__file__).parent / ".env"
