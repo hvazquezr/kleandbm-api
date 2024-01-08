@@ -2,13 +2,26 @@
 """
 
 from fastapi import FastAPI, Security, APIRouter
+from fastapi.middleware.cors import CORSMiddleware
 from .utils import VerifyToken
 from celery.result import AsyncResult
 import worker.main as worker
+from application.config import get_settings
 
+settings = get_settings()
 # Creates app instance
 app = FastAPI()
-router = APIRouter(prefix="/api/v1")
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_allow_origins,
+    allow_credentials=settings.cors_allow_credentials,
+    allow_methods=settings.cors_allow_methods,
+    allow_headers=settings.cors_allow_headers
+)
+
+router = APIRouter(prefix=settings.api_prefix)
 auth = VerifyToken()
 
 @router.get("/api/public")
