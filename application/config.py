@@ -14,9 +14,10 @@ class Settings(BaseSettings):
     cors_allow_methods: List[str]
     cors_allow_headers: List[str]
     api_prefix: str
-    kdsqldb_cluster: str
-    kdsqldb_key: str
-    kdsqldb_secret:str
+    ksqldb_cluster: str
+    ksqldb_key: str
+    ksqldb_secret: str
+    kafka_server: str
 
     class Config:
         env_file = Path(__file__).parent / ".env"
