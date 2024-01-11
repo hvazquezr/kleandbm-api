@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import List, Optional
-from enum import Enum
+from enum import Enum, IntEnum
 
 class Job(BaseModel):
     jobId: str
@@ -31,13 +31,13 @@ class Relationship(BaseModel):
     active: bool
     identifying: bool
 
-class DBTechnology(Enum):
+class DBTechnology(IntEnum):
     SNOWFLAKE = 1
     DATABRICKS = 2
     MSSQL = 3
     MYSQL = 4
 
-class ProjectType(Enum):
+class ProjectType(str, Enum):
     ANALYTICAL = "analytical"
     TRANSACTIONAL = "transactional"
 
@@ -59,10 +59,10 @@ class Project(BaseModel):
 class ProjectCreate(BaseModel):
     id: str
     name: str
-    #dbTechnology: DBTechnology
-    dbTechnology: int
-    #projectType: ProjectType
-    projectType: str
+    dbTechnology: DBTechnology
+    #dbTechnology: int
+    projectType: ProjectType
+    #projectType: str
     questions: str
     additionalInfo: Optional[str] = None
     namingRules: Optional[str] = None

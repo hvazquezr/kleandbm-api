@@ -1,6 +1,6 @@
-import json
 from confluent_kafka import Producer
 
+from application.models.kleandbm import Project, ProjectCreate
 from application.config import get_settings
 
 class ProjectService:
@@ -19,8 +19,9 @@ class ProjectService:
             ProjectService.producer.produce(topic, key=key, value=value)
             ProjectService.producer.flush()
 
+    # TODO: Change the return type to Project and handle that in Celeri
     # This function cannot be async because it's not supported by celery
     @staticmethod
-    def create_project(new_project):
-        ProjectService.kafka_produce('project-updates', new_project['id'], json.dumps(new_project), use_local_producer=True)
+    def create_project(new_project: ProjectCreate):
+        ProjectService.kafka_produce('project-updates', new_project.id, new_project.json(), use_local_producer=True)
         return ({'result': 'success'})

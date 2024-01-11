@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .utils import VerifyToken
 from celery.result import AsyncResult
 import worker.main as worker
-from application.models.project import Project, ProjectCreate, Job
+from application.models.kleandbm import Project, ProjectCreate, Job
 from application.config import get_settings
 
 settings = get_settings()
@@ -38,9 +38,9 @@ def public():
 
 @router.post("/projects", response_model=Job)
 async def create_project(new_project: ProjectCreate):
-    #new_project needs to be serialized otherwise celery breaks
     job = worker.create_project.delay(new_project.dict(exclude_none=True))
     return {"jobId": job.id}
+    
 
 @router.post("/tasks/")
 async def create_task_endpoint(auth_result: str = Security(auth.verify)):
