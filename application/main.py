@@ -1,13 +1,17 @@
 """Python FastAPI Auth0 integration example
 """
 
-from fastapi import FastAPI, Security, APIRouter, HTTPException
+from fastapi import FastAPI, Security, APIRouter, HTTPException, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-from .utils import VerifyToken
-from celery.result import AsyncResult
-import worker.main as worker
+from typing import List
+
+from application.utils import VerifyToken
 from application.models.kleandbm import Project, ProjectCreate, Job
 from application.config import get_settings
+
+import worker.main as worker
+
+from services.project_service import ProjectService
 
 settings = get_settings()
 # Creates app instance
@@ -36,10 +40,16 @@ def public():
     }
     return result
 
-@router.post("/projects", response_model=Job)
-async def create_project(new_project: ProjectCreate):
+@router.post("/projects", response_model=Job, status_code=202)
+async def create_project(new_project: ProjectCreate, response: Response, auth_result: str = Security(auth.verify)):
     job = worker.create_project.delay(new_project.dict(exclude_none=True))
+    response.status_code = status.HTTP_202_ACCEPTED
     return {"jobId": job.id}
+
+@router.get("/projects", response_model=List[Project])
+async def get_projects(auth_result: str = Security(auth.verify)):
+    projects = await ProjectService.get_projects()
+    return projects
     
 
 @router.post("/tasks/")

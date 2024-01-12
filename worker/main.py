@@ -26,4 +26,3 @@ def create_task():
     import time
     time.sleep(10)
     return "Task completed!"
-
