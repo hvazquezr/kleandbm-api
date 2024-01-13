@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     ksqldb_key: str
     ksqldb_secret: str
     kafka_server: str
+    openai_model: str
+    openai_key: str
 
     class Config:
         env_file = Path(__file__).parent / ".env"
