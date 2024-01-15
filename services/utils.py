@@ -64,8 +64,9 @@ def extract_json_text(input_text):
 
 # Prompts OpenAI
 def prompt_openai(model, system_message, user_message):
-    client = OpenAI(api_key=get_settings.openai_key)
-
+    client = OpenAI(api_key=get_settings().openai_key)
+    print(system_message)
+    print(user_message)
     try:
       response = client.chat.completions.create(
         model=model,
@@ -87,8 +88,6 @@ def prompt_openai(model, system_message, user_message):
         seed=0,
         #response_format={ "type": "json_object" }
       )
-      print(system_message)
-      print(user_message)
       print(response.choices[0].message.content)
       return extract_json_text(response.choices[0].message.content)
     except Exception as e:

@@ -42,9 +42,26 @@ def public():
 
 @router.post("/projects", response_model=Job, status_code=202)
 async def create_project(new_project: ProjectCreate, response: Response, auth_result: str = Security(auth.verify)):
-    job = worker.create_project.delay(new_project.dict(exclude_none=True))
+    job = worker.create_project.delay(new_project.model_dump(exclude_none=True))
     response.status_code = status.HTTP_202_ACCEPTED
     return {"jobId": job.id}
+    #response.status_code = status.HTTP_202_ACCEPTED
+    #return ProjectService.create_project(new_project)
+
+# @TODO: Needs to introduce end point to poll for project being created
+# @TODO: Consider not returning the entire project and just the project id
+@router.get("/jobs/{job_id}")
+async def get_status(job_id: str, auth_result: str = Security(auth.verify)):
+    job_result = worker.celery.AsyncResult(job_id)
+    #job_result.get() # Cleaning results
+    #task_result.forget()
+    result = {
+        "jobId": job_id,
+        "jobStatus": job_result.status,
+        "jobResult": job_result.result
+    }
+    return result
+
 
 @router.get("/projects", response_model=List[Project])
 async def get_projects(auth_result: str = Security(auth.verify)):
@@ -57,16 +74,6 @@ async def create_task_endpoint(auth_result: str = Security(auth.verify)):
     task = worker.create_task.delay()
     return {"task_id": task.id}
 
-@router.get("/tasks/{task_id}")
-async def get_status(task_id: str, auth_result: str = Security(auth.verify)):
-    task_result = worker.celery.AsyncResult(task_id)
-    #task_result.get() # Cleaning results
-    #task_result.forget()
-    result = {
-        "task_id": task_id,
-        "task_status": task_result.status,
-        "task_result": task_result.result
-    }
-    return result
+
 
 app.include_router(router)

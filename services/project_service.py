@@ -28,11 +28,10 @@ class ProjectService:
     @staticmethod
     def create_project(new_project: ProjectCreate):
         project_id = new_project.id
-        # @TODO: Determine if it makes sense to do this save
         ProjectService.kafka_produce('project-updates', project_id, new_project.model_dump_json())
         system_message = PromptGenerator.get_create_project_sytem_prompt(new_project)
         user_message = PromptGenerator.get_create_project_user_prompt(new_project)
-        raw_data_model = json.loads(services_utils.prompt_openai(get_settings.openai_model, system_message, user_message))
+        raw_data_model = json.loads(services_utils.prompt_openai(ProjectService.settings.openai_model, system_message, user_message))
         # @TODO: This should be of Project data Type
         # @TODO: Determine if it's best to move Save to the Project datatype
         suggested_data_model = services_utils.complete_project(project_id, raw_data_model)

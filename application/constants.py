@@ -1,36 +1,11 @@
-from application.models.kleandbm import DatabaseTechnology, DBTechnologyId
-
-
-DATABASE_TECHNOLOGIES = [
-            DatabaseTechnology(
-                id=DBTechnologyId.SNOWFLAKE,
-                name="Snowflake",
-                dataTypes=["VARCHAR", "NUMBER", "INTEGER", "FLOAT", "BOOLEAN", "DATE", "TIMESTAMP", "VARIANT", "OBJECT", "ARRAY", "GEOGRAPHY", "GEOMETRY"]
-            ),
-            DatabaseTechnology(
-                id=DBTechnologyId.DATABRICKS,
-                name="Databricks",
-                dataTypes=["BIGINT", "BINARY", "BOOLEAN", "DATE", "DECIMAL", "DOUBLE", "FLOAT", "INT", "INTERVAL", "SMALLINT", "STRING", "TIMESTAMP", "TIMESTAMP_NTZ", "TINYINT", "ARRAY", "MAP", "STRUCT"]
-            ),
-            DatabaseTechnology(
-                id=DBTechnologyId.MSSQL,
-                name="SQL Server",
-                dataTypes=["bigint", "int", "smallint", "tinyint", "bit", "decimal", "numeric", "money", "smallmoney", "float", "real", "datetime", "smalldatetime", "char", "varchar", "text", "nchar", "nvarchar", "ntext", "binary", "varbinary", "image", "cursor", "sql_variant", "table", "timestamp", "uniqueidentifier"]
-            ),
-            DatabaseTechnology(
-                id=DBTechnologyId.MYSQL,
-                name="MySql",
-                dataTypes=["INTEGER", "INT", "SMALLINT", "TINYINT", "MEDIUMINT", "BIGINT", "DECIMAL", "NUMERIC", "FLOAT", "DOUBLE", "DATE", "DATETIME", "TIMESTAMP", "TIME", "YEAR", "CHAR", "VARCHAR", "BINARY", "VARBINARY", "BLOB", "TEXT", "ENUM", "SET", "JSON"]
-            )
-]
-
 OPENAI_PROMPT_TEMPLATES = {
     'createProjectSystemMessage': "Act as a data architect. Design a relational database and provide a project \
 description for a {project_type} system in {db_technology_name} \
-using {model_type} based on a series of business questions, a set of naming rules, and some other information. \n\n \
-The responses should be a JSON array of tables with the format {description:project description (no more than 250 characters), tables:[{name:tableName, description:table desciption (no more than 100 characters), columns:[{name:Column Name, description: column description (no more than 100 characters), primaryKey: (true if it is primary key), dataType: data type},..]]}. \n\n \
+using {model_type} based on a series of business questions, a set of naming rules, and some other information.\n\n\
+The response should be a JSON array of tables with the format {{description:project description (no more than 250 characters), tables:[{{name:tableName, description:table desciption (no more than 100 characters), columns:[{{name:Column Name, description: column description (no more than 100 characters), primaryKey: (true if it is primary key), dataType: data type}},..]]}}}}.\n\n\
 {type_2_dimension}\
-Only include the following datatypes: {data_types}",
+Only include the following datatypes: {data_types}\n\n\
+Only include the json array and not additional context.",
 
     'createProjectUserMessage': "The business questions are:\n {questions}\n\n\
 Adhere to the following naming rules: {naming_rules}\n\n\

@@ -1,17 +1,23 @@
 from pydantic import BaseModel
 from typing import List, Optional
 from enum import Enum, IntEnum
-import application.constants as constants
+import application.constants as app_constants
 
 class Job(BaseModel):
     jobId: str
+
+class JobResult(BaseModel):
+    jobId: str
+    status: str
+    #how to do this for when tables are suggested
+    resultId: Optional[str]
+    result: Optional[dict]
 
 class Column(BaseModel):
     id: str
     name: str
     description: str
     dataType: str
-    active: bool
     primaryKey: bool
 
 class Table(BaseModel):
@@ -20,10 +26,18 @@ class Table(BaseModel):
     description: str
     active: bool
     columns: List[Column]
+    lastModified: int
+    projectId: Optional[str]
 
-class Position(BaseModel):
+class Node(BaseModel):
+    id: str
+    projectId: Optional[str]
+    active: bool
+    lastModified: int
+    tableId: str
     x: float
     y: float
+
 
 class Relationship(BaseModel):
     id: str
@@ -31,6 +45,7 @@ class Relationship(BaseModel):
     childColumn: str
     active: bool
     identifying: bool
+    label: Optional[str]
 
 class DBTechnologyId(IntEnum):
     SNOWFLAKE = 1
@@ -48,9 +63,11 @@ class Owner(BaseModel):
 
 class Project(BaseModel):
     id: str
+    name: str
     description: str
     tables: List[Table]
     relationships: List[Relationship]
+    nodes: List[Node]
     dbTechnology: DBTechnologyId
     projectType: ProjectType
     active: bool
@@ -72,9 +89,33 @@ class DatabaseTechnology(BaseModel):
     dataTypes: List[str]
 
 class DatabaseTechnologies:
+
+    database_technologies_list = [
+            DatabaseTechnology(
+                id=DBTechnologyId.SNOWFLAKE,
+                name="Snowflake",
+                dataTypes=["VARCHAR", "NUMBER", "INTEGER", "FLOAT", "BOOLEAN", "DATE", "TIMESTAMP", "VARIANT", "OBJECT", "ARRAY", "GEOGRAPHY", "GEOMETRY"]
+            ),
+            DatabaseTechnology(
+                id=DBTechnologyId.DATABRICKS,
+                name="Databricks",
+                dataTypes=["BIGINT", "BINARY", "BOOLEAN", "DATE", "DECIMAL", "DOUBLE", "FLOAT", "INT", "INTERVAL", "SMALLINT", "STRING", "TIMESTAMP", "TIMESTAMP_NTZ", "TINYINT", "ARRAY", "MAP", "STRUCT"]
+            ),
+            DatabaseTechnology(
+                id=DBTechnologyId.MSSQL,
+                name="SQL Server",
+                dataTypes=["bigint", "int", "smallint", "tinyint", "bit", "decimal", "numeric", "money", "smallmoney", "float", "real", "datetime", "smalldatetime", "char", "varchar", "text", "nchar", "nvarchar", "ntext", "binary", "varbinary", "image", "cursor", "sql_variant", "table", "timestamp", "uniqueidentifier"]
+            ),
+            DatabaseTechnology(
+                id=DBTechnologyId.MYSQL,
+                name="MySql",
+                dataTypes=["INTEGER", "INT", "SMALLINT", "TINYINT", "MEDIUMINT", "BIGINT", "DECIMAL", "NUMERIC", "FLOAT", "DOUBLE", "DATE", "DATETIME", "TIMESTAMP", "TIME", "YEAR", "CHAR", "VARCHAR", "BINARY", "VARBINARY", "BLOB", "TEXT", "ENUM", "SET", "JSON"]
+            )
+]
+
     @staticmethod
     def get_technology_by_id(technology_id: DBTechnologyId) -> Optional[DatabaseTechnology]:
-        for technology in constants.DATABASE_TECHNOLOGIES:
+        for technology in DatabaseTechnologies.database_technologies_list:
             if technology.id == technology_id:
                 return technology
         return None
@@ -82,7 +123,7 @@ class DatabaseTechnologies:
 class PromptGenerator:
     @staticmethod
     def get_prompt(key, **kwargs):
-        template = constants.OPENAI_PROMPT_TEMPLATES.get(key)
+        template = app_constants.OPENAI_PROMPT_TEMPLATES.get(key)
         return template.format(**kwargs)
 
     @staticmethod
@@ -98,8 +139,8 @@ class PromptGenerator:
             model_type = "a normalized model"
             type_2_dimension = "If Type 2 dimension is needed include a surrogate key; this surrogage key should be used for linking to other tables. Natural business keys should default to an integer-like data type.\n\n\
 Fact tables should not have a record id; the ids from the dimensions should be sufficient.\n\n"
-        return PromptGenerator.get_prompt("createProjectSystemMessage", project_type = new_project.projectType, \
-                                                                        database_technology_name = database_technology.name, \
+        return PromptGenerator.get_prompt("createProjectSystemMessage", project_type = new_project.projectType.value, \
+                                                                        db_technology_name = database_technology.name, \
                                                                         model_type = model_type, \
                                                                         type_2_dimension = type_2_dimension, \
                                                                         data_types = (", ".join(database_technology.dataTypes)))
@@ -109,10 +150,10 @@ Fact tables should not have a record id; the ids from the dimensions should be s
         naming_rules = ""
         additional_info = ""
         if not new_project.namingRules:
-            naming_rules = constants.DEFAULT_ANALYTICAL_NAMING_RULES if new_project.projectType == ProjectType.ANALYTICAL else constants.DEFAULT_TRANSACTIONAL_NAMING_RULES
+            naming_rules = app_constants.DEFAULT_ANALYTICAL_NAMING_RULES if new_project.projectType == ProjectType.ANALYTICAL else app_constants.DEFAULT_TRANSACTIONAL_NAMING_RULES
         else:
             naming_rules = new_project.namingRules
-        additional_info = constants.DEFAULT_ADDITIONAL_INFORMATION if not new_project.additionalInfo else new_project.additionalInfo        
+        additional_info = app_constants.DEFAULT_ADDITIONAL_INFORMATION if not new_project.additionalInfo else new_project.additionalInfo        
         return PromptGenerator.get_prompt("createProjectUserMessage", questions = new_project.questions, \
                                                                         naming_rules = naming_rules, \
                                                                         additional_info = additional_info)
