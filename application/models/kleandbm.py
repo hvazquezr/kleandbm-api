@@ -61,6 +61,16 @@ class Owner(BaseModel):
     id: str
     name: str
 
+class ProjectHeader(BaseModel):
+    id: str
+    name: str
+    description: str
+    dbTechnology: DBTechnologyId
+    projectType: ProjectType
+    active: bool
+    owner: Owner
+    lastModified: int
+
 class Project(BaseModel):
     id: str
     name: str

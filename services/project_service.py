@@ -1,7 +1,7 @@
 import json
 from confluent_kafka import Producer
 
-from application.models.kleandbm import Project, ProjectCreate, PromptGenerator
+from application.models.kleandbm import ProjectHeader, ProjectCreate, PromptGenerator
 from application.config import get_settings
 import services.utils as services_utils
 from typing import List
@@ -49,9 +49,9 @@ class ProjectService:
         return suggested_data_model
     
     @staticmethod
-    async def get_projects() -> List[Project]:
+    async def get_projects() -> List[ProjectHeader]:
         query = "SELECT * FROM PROJECTS WHERE `active`=true;" 
         ksql_response = await services_utils.query_ksql(ProjectService.settings.ksqldb_cluster, query)
         projects_json = services_utils.process_ksql_response(ksql_response)
-        response_list = [Project(**p) for p in json.loads(json.dumps(projects_json))]
+        response_list = [ProjectHeader(**p) for p in json.loads(json.dumps(projects_json))]
         return response_list
