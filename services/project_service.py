@@ -1,7 +1,7 @@
 import json
 from confluent_kafka import Producer
 
-from application.models.kleandbm import ProjectHeader, ProjectCreate, PromptGenerator
+from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, PromptGenerator
 from application.config import get_settings
 import services.utils as services_utils
 from typing import List
@@ -28,7 +28,6 @@ class ProjectService:
     @staticmethod
     def create_project(new_project: ProjectCreate):
         project_id = new_project.id
-        ProjectService.kafka_produce('project-updates', project_id, new_project.model_dump_json())
         system_message = PromptGenerator.get_create_project_sytem_prompt(new_project)
         user_message = PromptGenerator.get_create_project_user_prompt(new_project)
         raw_data_model = json.loads(services_utils.prompt_openai(ProjectService.settings.openai_model, system_message, user_message))
@@ -37,6 +36,7 @@ class ProjectService:
         suggested_data_model = services_utils.complete_project(project_id, raw_data_model)
         nodes = services_utils.generate_nodes(suggested_data_model, project_id)
 
+        ProjectService.kafka_produce('project-updates', project_id, new_project.model_dump_json(exclude_none=True))
         for table in suggested_data_model['tables']:
             ProjectService.kafka_produce('table-updates', project_id, json.dumps(table)) # Saving tables
 
@@ -51,7 +51,24 @@ class ProjectService:
     @staticmethod
     async def get_projects() -> List[ProjectHeader]:
         query = "SELECT * FROM PROJECTS WHERE `active`=true;" 
-        ksql_response = await services_utils.query_ksql(ProjectService.settings.ksqldb_cluster, query)
-        projects_json = services_utils.process_ksql_response(ksql_response)
-        response_list = [ProjectHeader(**p) for p in json.loads(json.dumps(projects_json))]
+        projects_json = await services_utils.query_ksql(ProjectService.settings.ksqldb_cluster, query)
+        response_list = [ProjectHeader(**p) for p in projects_json]
         return response_list
+    
+    @staticmethod
+    async def get_project(id) -> Project:
+        project_query = "SELECT * FROM PROJECTS WHERE `active`=true and `id`=\'" + id + "\';"
+        tables_query = "SELECT * FROM TABLES WHERE `active`=true and `projectId`=\'" + id + "\';"
+        relationships_query = "SELECT * FROM RELATIONSHIPS WHERE `active`=true and `projectId`=\'" + id + "\';"
+        nodes_query = "SELECT * FROM NODES WHERE `active`=true and `projectId`=\'" + id + "\';"
+
+        project_dict = (await services_utils.query_ksql(ProjectService.settings.ksqldb_cluster, project_query))[0]
+        tables = await services_utils.query_ksql(ProjectService.settings.ksqldb_cluster, tables_query)
+        relationships = await services_utils.query_ksql(ProjectService.settings.ksqldb_cluster, relationships_query)
+        nodes = await services_utils.query_ksql(ProjectService.settings.ksqldb_cluster, nodes_query)
+
+        project_dict['tables'] = tables
+        project_dict['relationships'] = relationships
+        project_dict['nodes'] = nodes
+
+        return Project(**project_dict)

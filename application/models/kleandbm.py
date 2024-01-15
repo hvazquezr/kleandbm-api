@@ -10,7 +10,6 @@ class JobResult(BaseModel):
     jobId: str
     status: str
     #how to do this for when tables are suggested
-    resultId: Optional[str]
     result: Optional[dict]
 
 class Column(BaseModel):
@@ -86,6 +85,7 @@ class Project(BaseModel):
 
 class ProjectCreate(BaseModel):
     id: str
+    active: bool = True
     name: str
     dbTechnology: DBTechnologyId
     projectType: ProjectType

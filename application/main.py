@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 
 from application.utils import VerifyToken
-from application.models.kleandbm import ProjectHeader, ProjectCreate, Job
+from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, Job, JobResult
 from application.config import get_settings
 
 import worker.main as worker
@@ -37,17 +37,22 @@ async def create_project(new_project: ProjectCreate, response: Response, auth_re
     #response.status_code = status.HTTP_202_ACCEPTED
     #return ProjectService.create_project(new_project)
 
-@router.get("/jobs/{job_id}")
+@router.get("/jobs/{job_id}", response_model=JobResult)
 async def get_status(job_id: str, auth_result: str = Security(auth.verify)):
     job_result = worker.celery.AsyncResult(job_id)
     #job_result.get() # Cleaning results
     #task_result.forget()
     result = {
         "jobId": job_id,
-        "jobStatus": job_result.status,
-        "jobResult": job_result.result
+        "status": job_result.status,
+        "result": job_result.result
     }
     return result
+
+@router.get("/projects/{project_id}", response_model=Project)
+async def get_project(project_id: str, auth_result: str = Security(auth.verify)):
+    project = await ProjectService.get_project(project_id)
+    return project
 
 
 @router.get("/projects", response_model=List[ProjectHeader])

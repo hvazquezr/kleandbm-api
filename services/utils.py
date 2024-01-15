@@ -9,28 +9,6 @@ import networkx as nx
 # To be used for requests to ksql but it's global for performance reasons
 session = aiohttp.ClientSession()
 
-async def query_ksql(kdsqldb_cluster, ksql_query):
-    headers = {
-        'Content-Type': 'application/vnd.ksql.v1+json; charset=utf-8',
-        'Accept': 'application/json'
-    }
-    data = json.dumps({
-        'ksql': ksql_query,
-        'streamsProperties': {}
-    })
-
-    try:
-        # Use the provided session to make the HTTP request
-        async with session.post(kdsqldb_cluster + '/query', headers=headers, data=data, ssl=False) as response:
-            if response.status == 200:
-                return await response.json()
-            else:
-                print(f"Error querying ksqlDB: HTTP Status {response.status}")
-                return []
-    except Exception as e:
-        print(f"Error querying ksqlDB: {e}")
-        return []
-
 # Formats replies from ksql in a more intuitive json format   
 def process_ksql_response(json_data):
     # Extract the schema from the first element
@@ -46,6 +24,28 @@ def process_ksql_response(json_data):
         row_dict = dict(zip(column_names, row_data))
         result.append(row_dict)
     return result
+
+async def query_ksql(kdsqldb_cluster, ksql_query):
+    headers = {
+        'Content-Type': 'application/vnd.ksql.v1+json; charset=utf-8',
+        'Accept': 'application/json'
+    }
+    data = json.dumps({
+        'ksql': ksql_query,
+        'streamsProperties': {}
+    })
+
+    try:
+        # Use the provided session to make the HTTP request
+        async with session.post(kdsqldb_cluster + '/query', headers=headers, data=data, ssl=False) as response:
+            if response.status == 200:
+                return process_ksql_response(await response.json())
+            else:
+                print(f"Error querying ksqlDB: HTTP Status {response.status}")
+                return []
+    except Exception as e:
+        print(f"Error querying ksqlDB: {e}")
+        return []
 
 # Retrieve only the text between the markers ```json and ``` from OpenAI API responses
 def extract_json_text(input_text):

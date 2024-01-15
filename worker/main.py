@@ -17,12 +17,5 @@ celery.conf.update(
 # new_project cannot be ProjectCreate because it cannot be serialized
 @celery.task(name="create_project")
 def create_project(new_project):
-    result = ProjectService.create_project(ProjectCreate.parse_raw(json.dumps(new_project)))
+    result = ProjectService.create_project(ProjectCreate(**new_project))
     return result
-
-@celery.task(name="create_task")
-def create_task():
-    # Simulate a long-running task
-    import time
-    time.sleep(10)
-    return "Task completed!"
