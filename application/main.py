@@ -63,6 +63,9 @@ async def get_project(project_id: str, auth_result: str = Security(auth.verify))
 async def update_project(project_id: str, updated_project: ProjectUpdate, auth_result: str = Security(auth.verify)):
     return (await ProjectService.update_project(project_id, updated_project))
 
+@router.delete("/projects/{project_id}")
+async def delete_project(project_id: str, auth_result: str = Security(auth.verify)):
+    return (await ProjectService.delete_project(project_id))
 
     
 app.include_router(router)
