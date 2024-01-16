@@ -1,7 +1,7 @@
 import json
 from confluent_kafka import Producer
 
-from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, PromptGenerator
+from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, PromptGenerator
 from application.config import get_settings
 import services.utils as services_utils
 from typing import List
@@ -72,3 +72,8 @@ class ProjectService:
         project_dict['nodes'] = nodes
 
         return Project(**project_dict)
+    
+    @staticmethod
+    async def update_project(id, updated_project) -> ProjectUpdate:
+        await ProjectService.async_kafka_produce('project-updates', id, updated_project.model_dump_json(exclude_none=True))
+        return updated_project

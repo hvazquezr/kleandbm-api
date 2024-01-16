@@ -93,6 +93,11 @@ class ProjectCreate(BaseModel):
     additionalInfo: Optional[str] = None
     namingRules: Optional[str] = None
 
+class ProjectUpdate(BaseModel):
+    id: str
+    active: Optional[bool] = True
+    name: Optional[str] = None
+
 class DatabaseTechnology(BaseModel):
     id: DBTechnologyId
     name: str
