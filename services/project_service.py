@@ -79,10 +79,9 @@ class ProjectService:
         return updated_project
     
     @staticmethod
-    async def delete_project(id) -> ProjectUpdate:
+    async def delete_project(id):
         to_delete_project = ProjectUpdate(id = id, active=False)
         await ProjectService.async_kafka_produce('project-updates', id, to_delete_project.model_dump_json(exclude_none=True))
-        return to_delete_project
 
     @staticmethod
     async def update_node(project_id, updated_Node) -> NodeUpdate:
@@ -91,8 +90,7 @@ class ProjectService:
         return updated_Node
 
     @staticmethod
-    async def delete_node(project_id, node_id) -> NodeUpdate:
+    async def delete_node(project_id, node_id):
         to_delete_node = NodeUpdate(id = node_id, active=False)
         await ProjectService.async_kafka_produce('node-updates', project_id, to_delete_node.model_dump_json(exclude_none=True))
         await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
-        return to_delete_node

@@ -34,8 +34,6 @@ async def create_project(new_project: ProjectCreate, response: Response, auth_re
     job = worker.create_project.delay(new_project.model_dump(exclude_none=True))
     response.status_code = status.HTTP_202_ACCEPTED
     return {"jobId": job.id}
-    #response.status_code = status.HTTP_202_ACCEPTED
-    #return ProjectService.create_project(new_project)
 
 @router.get("/jobs/{job_id}", response_model=JobResult)
 async def get_status(job_id: str, auth_result: str = Security(auth.verify)):
@@ -63,18 +61,18 @@ async def get_project(project_id: str, auth_result: str = Security(auth.verify))
 async def update_project(project_id: str, updated_project: ProjectUpdate, auth_result: str = Security(auth.verify)):
     return (await ProjectService.update_project(project_id, updated_project))
 
-@router.delete("/projects/{project_id}")
+@router.delete("/projects/{project_id}", status_code=204)
 async def delete_project(project_id: str, auth_result: str = Security(auth.verify)):
-    return (await ProjectService.delete_project(project_id))
+    await ProjectService.delete_project(project_id)
+    return Response(status_code = status.HTTP_204_NO_CONTENT)
 
 @router.patch("/projects/{project_id}/nodes/{node_id}", response_model= NodeUpdate)
 async def update_node(project_id: str, updated_node: NodeUpdate, auth_result: str = Security(auth.verify)):
     return (await ProjectService.update_node(project_id, updated_node))
 
-@router.delete("/projects/{project_id}/nodes/{node_id}", response_model= NodeUpdate)
+@router.delete("/projects/{project_id}/nodes/{node_id}", status_code=204)
 async def delete_node(project_id: str, node_id: str, auth_result: str = Security(auth.verify)):
-    return (await ProjectService.delete_node(project_id, node_id))
-
-
+    await ProjectService.delete_node(project_id, node_id)
+    return Response(status_code = status.HTTP_204_NO_CONTENT)
     
 app.include_router(router)
