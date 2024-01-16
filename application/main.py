@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 
 from application.utils import VerifyToken
-from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, Job, JobResult
+from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, NodeUpdate,Job, JobResult
 from application.config import get_settings
 
 import worker.main as worker
@@ -66,6 +66,15 @@ async def update_project(project_id: str, updated_project: ProjectUpdate, auth_r
 @router.delete("/projects/{project_id}")
 async def delete_project(project_id: str, auth_result: str = Security(auth.verify)):
     return (await ProjectService.delete_project(project_id))
+
+@router.patch("/projects/{project_id}/nodes/{node_id}", response_model= NodeUpdate)
+async def update_node(project_id: str, updated_node: NodeUpdate, auth_result: str = Security(auth.verify)):
+    return (await ProjectService.update_node(project_id, updated_node))
+
+@router.delete("/projects/{project_id}/nodes/{node_id}", response_model= NodeUpdate)
+async def delete_node(project_id: str, node_id: str, auth_result: str = Security(auth.verify)):
+    return (await ProjectService.delete_node(project_id, node_id))
+
 
     
 app.include_router(router)

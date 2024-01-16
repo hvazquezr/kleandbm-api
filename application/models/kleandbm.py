@@ -37,6 +37,13 @@ class Node(BaseModel):
     x: float
     y: float
 
+class NodeUpdate(BaseModel):
+    id: str
+    projectId: Optional[str] = None
+    active: Optional[bool] = True
+    tableId: Optional[str] = None
+    x: Optional[float] = None
+    y: Optional[float] = None
 
 class Relationship(BaseModel):
     id: str
