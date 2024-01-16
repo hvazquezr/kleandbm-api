@@ -57,21 +57,21 @@ class ProjectService:
     
     @staticmethod
     async def get_project(id) -> Project:
+        result = None
         project_query = "SELECT * FROM PROJECTS WHERE `active`=true and `id`=\'" + id + "\';"
-        tables_query = "SELECT * FROM TABLES WHERE `active`=true and `projectId`=\'" + id + "\';"
-        relationships_query = "SELECT * FROM RELATIONSHIPS WHERE `active`=true and `projectId`=\'" + id + "\';"
-        nodes_query = "SELECT * FROM NODES WHERE `active`=true and `projectId`=\'" + id + "\';"
-
-        project_dict = (await services_utils.query_ksql(ProjectService.settings.ksqldb_cluster, project_query))[0]
-        tables = await services_utils.query_ksql(ProjectService.settings.ksqldb_cluster, tables_query)
-        relationships = await services_utils.query_ksql(ProjectService.settings.ksqldb_cluster, relationships_query)
-        nodes = await services_utils.query_ksql(ProjectService.settings.ksqldb_cluster, nodes_query)
-
-        project_dict['tables'] = tables
-        project_dict['relationships'] = relationships
-        project_dict['nodes'] = nodes
-
-        return Project(**project_dict)
+        project_dict = (await services_utils.query_ksql(ProjectService.settings.ksqldb_cluster, project_query))
+        if len(project_dict) >= 1: #should be no more than 1
+            tables_query = "SELECT * FROM TABLES WHERE `active`=true and `projectId`=\'" + id + "\';"
+            relationships_query = "SELECT * FROM RELATIONSHIPS WHERE `active`=true and `projectId`=\'" + id + "\';"
+            nodes_query = "SELECT * FROM NODES WHERE `active`=true and `projectId`=\'" + id + "\';"
+            tables = await services_utils.query_ksql(ProjectService.settings.ksqldb_cluster, tables_query)
+            relationships = await services_utils.query_ksql(ProjectService.settings.ksqldb_cluster, relationships_query)
+            nodes = await services_utils.query_ksql(ProjectService.settings.ksqldb_cluster, nodes_query)
+            project_dict[0]['tables'] = tables
+            project_dict[0]['relationships'] = relationships
+            project_dict[0]['nodes'] = nodes
+            result = Project(**(project_dict[0]))
+        return result
     
     @staticmethod
     async def update_project(id, updated_project) -> ProjectUpdate:

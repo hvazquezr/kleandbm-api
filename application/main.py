@@ -55,6 +55,8 @@ async def get_projects(auth_result: str = Security(auth.verify)):
 @router.get("/projects/{project_id}", response_model=Project)
 async def get_project(project_id: str, auth_result: str = Security(auth.verify)):
     project = await ProjectService.get_project(project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
     return project
 
 @router.patch("/projects/{project_id}", response_model=ProjectUpdate)
