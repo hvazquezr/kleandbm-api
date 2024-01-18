@@ -1,7 +1,8 @@
 import json
 from confluent_kafka import Producer
+import asyncio
 
-from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, NodeUpdate, PromptGenerator
+from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, NodeUpdate, TableUpdate, RelationshipUpdate, SQLResponse,PromptGenerator
 from application.config import get_settings
 import services.utils as services_utils
 from typing import List
@@ -51,28 +52,46 @@ class ProjectService:
     @staticmethod
     async def get_projects() -> List[ProjectHeader]:
         query = "SELECT * FROM PROJECTS WHERE `active`=true;" 
-        projects_json = await services_utils.query_ksql(ProjectService.settings.ksqldb_cluster, query)
+        projects_json = await services_utils.async_query_ksql(ProjectService.settings.ksqldb_cluster, query)
         response_list = [ProjectHeader(**p) for p in projects_json]
         return response_list
     
     @staticmethod
-    async def get_project(id) -> Project:
+    async def async_get_project(id) -> Project:
         result = None
         project_query = "SELECT * FROM PROJECTS WHERE `active`=true and `id`=\'" + id + "\';"
-        project_dict = (await services_utils.query_ksql(ProjectService.settings.ksqldb_cluster, project_query))
+        project_dict = (await services_utils.async_query_ksql(ProjectService.settings.ksqldb_cluster, project_query))
         if len(project_dict) >= 1: #should be no more than 1
             tables_query = "SELECT * FROM TABLES WHERE `active`=true and `projectId`=\'" + id + "\';"
             relationships_query = "SELECT * FROM RELATIONSHIPS WHERE `active`=true and `projectId`=\'" + id + "\';"
             nodes_query = "SELECT * FROM NODES WHERE `active`=true and `projectId`=\'" + id + "\';"
-            tables = await services_utils.query_ksql(ProjectService.settings.ksqldb_cluster, tables_query)
-            relationships = await services_utils.query_ksql(ProjectService.settings.ksqldb_cluster, relationships_query)
-            nodes = await services_utils.query_ksql(ProjectService.settings.ksqldb_cluster, nodes_query)
+            tables = await services_utils.async_query_ksql(ProjectService.settings.ksqldb_cluster, tables_query)
+            relationships = await services_utils.async_query_ksql(ProjectService.settings.ksqldb_cluster, relationships_query)
+            nodes = await services_utils.async_query_ksql(ProjectService.settings.ksqldb_cluster, nodes_query)
             project_dict[0]['tables'] = tables
             project_dict[0]['relationships'] = relationships
             project_dict[0]['nodes'] = nodes
             result = Project(**(project_dict[0]))
         return result
     
+    @staticmethod
+    def get_project(id) -> Project:
+        result = None
+        project_query = "SELECT * FROM PROJECTS WHERE `active`=true and `id`=\'" + id + "\';"
+        project_dict = services_utils.query_ksql(ProjectService.settings.ksqldb_cluster, project_query)
+        if len(project_dict) >= 1: #should be no more than 1
+            tables_query = "SELECT * FROM TABLES WHERE `active`=true and `projectId`=\'" + id + "\';"
+            relationships_query = "SELECT * FROM RELATIONSHIPS WHERE `active`=true and `projectId`=\'" + id + "\';"
+            nodes_query = "SELECT * FROM NODES WHERE `active`=true and `projectId`=\'" + id + "\';"
+            tables = services_utils.query_ksql(ProjectService.settings.ksqldb_cluster, tables_query)
+            relationships = services_utils.query_ksql(ProjectService.settings.ksqldb_cluster, relationships_query)
+            nodes = services_utils.query_ksql(ProjectService.settings.ksqldb_cluster, nodes_query)
+            project_dict[0]['tables'] = tables
+            project_dict[0]['relationships'] = relationships
+            project_dict[0]['nodes'] = nodes
+            result = Project(**(project_dict[0]))
+        return result
+
     @staticmethod
     async def update_project(id, updated_project) -> ProjectUpdate:
         await ProjectService.async_kafka_produce('project-updates', id, updated_project.model_dump_json(exclude_none=True))
@@ -84,13 +103,47 @@ class ProjectService:
         await ProjectService.async_kafka_produce('project-updates', id, to_delete_project.model_dump_json(exclude_none=True))
 
     @staticmethod
-    async def update_node(project_id, updated_Node) -> NodeUpdate:
-        await ProjectService.async_kafka_produce('node-updates', project_id, updated_Node.model_dump_json(exclude_none=True))
+    async def update_node(project_id, updated_node) -> NodeUpdate:
+        await ProjectService.async_kafka_produce('node-updates', project_id, updated_node.model_dump_json(exclude_none=True))
         await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
-        return updated_Node
+        return updated_node
 
     @staticmethod
     async def delete_node(project_id, node_id):
         to_delete_node = NodeUpdate(id = node_id, active=False)
         await ProjectService.async_kafka_produce('node-updates', project_id, to_delete_node.model_dump_json(exclude_none=True))
         await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
+
+    @staticmethod
+    async def update_table(project_id, updated_table) -> TableUpdate:
+        await ProjectService.async_kafka_produce('table-updates', project_id, updated_table.model_dump_json(exclude_none=True))
+        await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
+        return updated_table
+
+    @staticmethod
+    async def delete_table(project_id, table_id):
+        to_delete_table = TableUpdate(id = table_id, active=False)
+        await ProjectService.async_kafka_produce('table-updates', project_id, to_delete_table.model_dump_json(exclude_none=True))
+        await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
+
+    @staticmethod
+    async def update_relationship(project_id, updated_relationship) -> RelationshipUpdate:
+        await ProjectService.async_kafka_produce('relationship-updates', project_id, updated_relationship.model_dump_json(exclude_none=True))
+        await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
+        return updated_relationship
+
+    @staticmethod
+    async def delete_relationship(project_id, relationship_id):
+        to_delete_relationship = RelationshipUpdate(id = relationship_id, active=False)
+        await ProjectService.async_kafka_produce('relationship-updates', project_id, to_delete_relationship.model_dump_json(exclude_none=True))
+        await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
+
+    # Cannot be async because it will be used as Celeri
+    @staticmethod
+    def get_project_sql(id):
+        project = ProjectService.get_project(id)
+        del project.nodes
+        system_message = PromptGenerator.get_sql_system_prompt(project)
+        user_message = PromptGenerator.get_sql_user_prompt(project)
+        sql = services_utils.prompt_openai(ProjectService.settings.openai_model, system_message, user_message, response_type=services_utils.ResponseType.SQL)
+        return SQLResponse(sql=sql).model_dump()

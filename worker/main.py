@@ -1,6 +1,6 @@
 from celery import Celery
 from worker.config import get_celery_settings
-from application.models.kleandbm import Project, ProjectCreate
+from application.models.kleandbm import ProjectCreate
 from services.project_service import ProjectService
 import json
 
@@ -18,4 +18,9 @@ celery.conf.update(
 @celery.task(name="create_project")
 def create_project(new_project):
     result = ProjectService.create_project(ProjectCreate(**new_project))
+    return result
+
+@celery.task(name="get_sql")
+def get_project_sql(project_id):
+    result = ProjectService.get_project_sql(project_id)
     return result

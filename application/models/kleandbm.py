@@ -28,6 +28,15 @@ class Table(BaseModel):
     lastModified: int
     projectId: Optional[str]
 
+class TableUpdate(BaseModel):
+    id: str
+    name: Optional[str] = None
+    description: Optional[str] = None
+    active: Optional[bool] = None
+    columns: Optional[List[Column]] = None
+    lastModified: Optional[int] = None
+    projectId: Optional[str] = None
+
 class Node(BaseModel):
     id: str
     projectId: Optional[str]
@@ -51,6 +60,14 @@ class Relationship(BaseModel):
     childColumn: str
     active: bool
     identifying: bool
+    label: Optional[str]
+
+class RelationshipUpdate(BaseModel):
+    id: str
+    parentColumn: Optional[str]
+    childColumn: Optional[str]
+    active: Optional[bool] = True
+    identifying: Optional[bool] = None
     label: Optional[str]
 
 class DBTechnologyId(IntEnum):
@@ -109,6 +126,9 @@ class DatabaseTechnology(BaseModel):
     id: DBTechnologyId
     name: str
     dataTypes: List[str]
+
+class SQLResponse(BaseModel):
+    sql: str
 
 class DatabaseTechnologies:
 
@@ -179,3 +199,12 @@ Fact tables should not have a record id; the ids from the dimensions should be s
         return PromptGenerator.get_prompt("createProjectUserMessage", questions = new_project.questions, \
                                                                         naming_rules = naming_rules, \
                                                                         additional_info = additional_info)
+    
+    @staticmethod
+    def get_sql_system_prompt(project: Project):
+        database_technology = DatabaseTechnologies.get_technology_by_id(project.dbTechnology)
+        return PromptGenerator.get_prompt("generateSqlPrompt", db_technology_name = database_technology.name)
+    
+    @staticmethod
+    def get_sql_user_prompt(project: Project):
+        return project.model_dump_json()

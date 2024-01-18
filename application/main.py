@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 
 from application.utils import VerifyToken
-from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, NodeUpdate,Job, JobResult
+from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, NodeUpdate,Job, JobResult, TableUpdate, RelationshipUpdate
 from application.config import get_settings
 
 import worker.main as worker
@@ -54,7 +54,7 @@ async def get_projects(auth_result: str = Security(auth.verify)):
 
 @router.get("/projects/{project_id}", response_model=Project)
 async def get_project(project_id: str, auth_result: str = Security(auth.verify)):
-    project = await ProjectService.get_project(project_id)
+    project = await ProjectService.async_get_project(project_id)
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
     return project
@@ -76,5 +76,30 @@ async def update_node(project_id: str, updated_node: NodeUpdate, auth_result: st
 async def delete_node(project_id: str, node_id: str, auth_result: str = Security(auth.verify)):
     await ProjectService.delete_node(project_id, node_id)
     return Response(status_code = status.HTTP_204_NO_CONTENT)
+
+@router.patch("/projects/{project_id}/tables/{table_id}", response_model= TableUpdate)
+async def update_table(project_id: str, updated_table: TableUpdate, auth_result: str = Security(auth.verify)):
+    return (await ProjectService.update_table(project_id, updated_table))
+
+@router.delete("/projects/{project_id}/tables/{table_id}", status_code=204)
+async def delete_table(project_id: str, table_id: str, auth_result: str = Security(auth.verify)):
+    await ProjectService.delete_table(project_id, table_id)
+    return Response(status_code = status.HTTP_204_NO_CONTENT)
+
+@router.patch("/projects/{project_id}/relationships/{relationship_id}", response_model= RelationshipUpdate)
+async def update_relationship(project_id: str, updated_relationship: RelationshipUpdate, auth_result: str = Security(auth.verify)):
+    return (await ProjectService.update_relationship(project_id, updated_relationship))
+
+@router.delete("/projects/{project_id}/relationships/{relationship_id}", status_code=204)
+async def delete_relationship(project_id: str, relationship_id: str, auth_result: str = Security(auth.verify)):
+    await ProjectService.delete_relationship(project_id, relationship_id)
+    return Response(status_code = status.HTTP_204_NO_CONTENT)
+
+@router.get("/projects/{project_id}/sql", response_model=Job)
+async def get_project_sql(project_id: str, response: Response, auth_result: str = Security(auth.verify)):
+    job = worker.get_project_sql.delay(project_id)
+    response.status_code = status.HTTP_202_ACCEPTED
+    return {"jobId": job.id}
+
     
 app.include_router(router)

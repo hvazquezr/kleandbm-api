@@ -1,10 +1,16 @@
 import json
 import re
+import requests
 import aiohttp
 from nanoid import generate
 from openai import OpenAI
 from application.config import get_settings
 import networkx as nx
+from enum import Enum
+
+class ResponseType(str, Enum):
+    JSON = "json"
+    SQL = "sql"
 
 # To be used for requests to ksql but it's global for performance reasons
 session = aiohttp.ClientSession()
@@ -25,7 +31,7 @@ def process_ksql_response(json_data):
         result.append(row_dict)
     return result
 
-async def query_ksql(kdsqldb_cluster, ksql_query):
+async def async_query_ksql(kdsqldb_cluster, ksql_query):
     headers = {
         'Content-Type': 'application/vnd.ksql.v1+json; charset=utf-8',
         'Accept': 'application/json'
@@ -46,12 +52,31 @@ async def query_ksql(kdsqldb_cluster, ksql_query):
     except Exception as e:
         print(f"Error querying ksqlDB: {e}")
         return []
+    
+def query_ksql(kdsqldb_cluster, ksql_query):
+    headers = {
+        'Content-Type': 'application/vnd.ksql.v1+json; charset=utf-8',
+        'Accept': 'application/json'
+    }
+    data = json.dumps({
+        'ksql': ksql_query,
+        'streamsProperties': {}
+    })
+
+    try:
+        query_response = requests.post(kdsqldb_cluster+'/query', headers=headers, data=data)
+        return process_ksql_response(query_response.json())
+    except Exception as e:
+        print(f"Error querying ksqlDB: {e}")
+        return []
 
 # Retrieve only the text between the markers ```json and ``` from OpenAI API responses
-def extract_json_text(input_text):
+def extract_code_text(input_text, response_type):
     # Define a regular expression pattern to match text between ```json and ```
     pattern = r'```json(.*?)```'
-    
+    if response_type == ResponseType.SQL:
+        pattern = r'```sql(.*?)```'
+
     # Use re.DOTALL to match across multiple lines
     match = re.search(pattern, input_text, re.DOTALL)
     
@@ -63,7 +88,7 @@ def extract_json_text(input_text):
         return None
 
 # Prompts OpenAI
-def prompt_openai(model, system_message, user_message):
+def prompt_openai(model, system_message, user_message, response_type = ResponseType.JSON):
     client = OpenAI(api_key=get_settings().openai_key)
     print(system_message)
     print(user_message)
@@ -89,7 +114,7 @@ def prompt_openai(model, system_message, user_message):
         #response_format={ "type": "json_object" }
       )
       print(response.choices[0].message.content)
-      return extract_json_text(response.choices[0].message.content)
+      return extract_code_text(response.choices[0].message.content, response_type)
     except Exception as e:
         print(f"An error occurred: {e}")
         return None
