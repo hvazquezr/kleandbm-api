@@ -129,9 +129,11 @@ def prompt_openai(model, system_message, user_message, response_type = ResponseT
         seed=0,
         #response_format={ "type": "json_object" }
       )
-      print(response.choices[0].message.content)
+      #print(response.choices[0].message.content)
       # @TODO: Need to handle the situation where the code is not wrapped in json tags
-      return extract_code_text(response.choices[0].message.content, response_type) 
+      result = extract_code_text(response.choices[0].message.content, response_type) 
+      print(result)
+      return result
     except Exception as e:
         print(f"An error occurred: {e}")
         return None
@@ -219,3 +221,9 @@ def generate_nodes(json_data, project_id):
     ]
 
     return table_positions
+
+def generate_id_if_missing(json_array):
+    for item in json_array:
+        if "id" not in item:
+            # Generate a unique ID using nanoid
+            item["id"] = generate()

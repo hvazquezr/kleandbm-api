@@ -15,10 +15,10 @@ Also consider the following information:\n{additional_info}",
 
     'suggestNewTablesPrompt': "Act as an expert sql programmer and data architect. You will be provided a json representation of a database model for {db_technology_name}, instructions to create a new table, or set of new tables to complement this model. Provide the structure for these tables in a json array referencing the json structure below. Do not include any commentary or explanation. \nConsider the following data types: {data_types}",
 
-    'editTablePrompt': "Act as an expert sql programmer and data architect. You will be provided a json representation of a table for {db_technology_name} and instructions to modify the table structure or description. Provide the structure for suggested modified table in a json object referencing the json structure provided. Newly added columns should not have the id attribute.\n\
+    'editTablePrompt': "Act as an expert sql programmer and data architect. You will be provided a json representation of a table for {db_technology_name} and instructions to modify the table structure or description. Provide the structure for suggested modified table in a json object referencing {reference_structure}. Newly added columns should not have the id attribute.\n\
 If a column is renamed but preserves the intent of the previous name retain the same id.\n\
-Consider the following data types: {db_technology_name}\n\
-Current table structure:\n",
+Consider the following data types: {data_types}\n\
+Current table structure:\n\n\n{table_structure}",
 
     'referenceTableStructure':" this json structure:\n\
  {\n\

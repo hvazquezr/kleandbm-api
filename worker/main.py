@@ -29,3 +29,8 @@ def get_project_sql(project_id):
 def generate_table_recommendations(project_id, prompt):
     result = ProjectService.generate_ai_table_recommendations(project_id, prompt)
     return result
+
+@celery.task(name="generate_table_edits")
+def generate_table_edits(project_id, user_request):
+    result = ProjectService.generate_ai_table_edits(project_id, user_request)
+    return result

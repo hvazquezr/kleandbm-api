@@ -1,8 +1,8 @@
 import json
 from confluent_kafka import Producer
 import asyncio
-
-from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, NodeUpdate, TableUpdate, RelationshipUpdate, SQLResponse,PromptGenerator
+from application.models.PromptGenerator import PromptGenerator
+from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, NodeUpdate, TableUpdate, RelationshipUpdate, SQLResponse
 from application.config import get_settings
 import services.utils as services_utils
 from typing import List
@@ -154,5 +154,16 @@ class ProjectService:
         project = ProjectService.get_project(id)
         system_message = PromptGenerator.get_ai_add_table_system_prompt(project)
         user_message = PromptGenerator.get_ai_add_table_user_prompt(project, prompt)
-        recommended_tables = services_utils.prompt_openai(ProjectService.settings.openai_model, system_message, user_message)
+        recommended_tables = json.loads(services_utils.prompt_openai(ProjectService.settings.openai_model, system_message, user_message))
         return recommended_tables
+
+    # Cannot be async because it will be used as Celeri
+    @staticmethod
+    def generate_ai_table_edits(id, user_request):
+        project = ProjectService.get_project(id)
+        system_message = PromptGenerator.get_ai_edit_table_system_prompt(project, user_request['currentTable'])
+        user_message = user_request['prompt']
+        openai_response = services_utils.prompt_openai(ProjectService.settings.openai_model, system_message, user_message)
+        response = json.loads(openai_response)
+        services_utils.generate_id_if_missing(response['columns'])
+        return response

@@ -102,10 +102,16 @@ async def get_project_sql(project_id: str, response: Response, auth_result: str 
     return {"jobId": job.id}
 
 @router.post("/projects/{project_id}/aisuggestedtables", response_model=Job)
-async def generate_table_recommendations(project_id: str, prompt: Prompt, response: Response, auth_result: str = Security(auth.verify)):
+async def generate_table_recommendations_with_ai(project_id: str, prompt: Prompt, response: Response, auth_result: str = Security(auth.verify)):
     job = worker.generate_table_recommendations.delay(project_id, prompt.prompt)
     response.status_code = status.HTTP_202_ACCEPTED
     return {"jobId": job.id}
+
+@router.post("/projects/{project_id}/tables/{table_id}/aitableedits")
+async def generate_table_edit_with_ai(project_id: str, table_id: str, user_request: dict, response: Response, auth_result: str = Security(auth.verify)):
+    job = worker.generate_table_edits.delay(project_id, user_request)
+    response.status_code = status.HTTP_202_ACCEPTED
+    return {"jobId": job.id}  
 
     
 app.include_router(router)
