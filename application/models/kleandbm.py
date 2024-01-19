@@ -1,7 +1,9 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Union, Any
 from enum import Enum, IntEnum
+import json
 import application.constants as app_constants
+import application.utils as utils 
 
 class Job(BaseModel):
     jobId: str
@@ -10,7 +12,7 @@ class JobResult(BaseModel):
     jobId: str
     status: str
     #how to do this for when tables are suggested
-    result: Optional[dict]
+    result: Any = None
 
 class Column(BaseModel):
     id: str
@@ -130,6 +132,9 @@ class DatabaseTechnology(BaseModel):
 class SQLResponse(BaseModel):
     sql: str
 
+class Prompt(BaseModel):
+    prompt: str
+
 class DatabaseTechnologies:
 
     database_technologies_list = [
@@ -161,7 +166,7 @@ class DatabaseTechnologies:
             if technology.id == technology_id:
                 return technology
         return None
-    
+
 class PromptGenerator:
     @staticmethod
     def get_prompt(key, **kwargs):
@@ -208,3 +213,14 @@ Fact tables should not have a record id; the ids from the dimensions should be s
     @staticmethod
     def get_sql_user_prompt(project: Project):
         return project.model_dump_json()
+    
+    @staticmethod
+    def get_ai_add_table_system_prompt(project: Project):
+        database_technology = DatabaseTechnologies.get_technology_by_id(project.dbTechnology)
+        return PromptGenerator.get_prompt("suggestNewTablesPrompt", db_technology_name = database_technology.name, data_types = (", ".join(database_technology.dataTypes)))
+    
+    @staticmethod
+    def get_ai_add_table_user_prompt(project: Project, prompt: str):
+        project_dict = project.model_dump()
+        project_tables = utils.remove_attributes(project_dict['tables'], ["id", "active", "lastModified", "projectId"])
+        return prompt + '\n\n' + json.dumps(project_tables)

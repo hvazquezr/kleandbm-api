@@ -58,3 +58,19 @@ class VerifyToken:
             raise UnauthorizedException(str(error))
     
         return payload
+
+def remove_attributes(json_array, attributes_to_remove):
+
+    # Iterate through each element in the JSON array
+    cleaned_array = []
+    for item in json_array:
+        # Create a new dictionary with only the desired attributes
+        cleaned_item = {key: value for key, value in item.items() if key not in attributes_to_remove}
+
+        # Remove attributes from the 'columns' array if it exists
+        if 'columns' in cleaned_item and isinstance(cleaned_item['columns'], list):
+            cleaned_item['columns'] = [{col_key: col_value for col_key, col_value in col.items() if col_key not in attributes_to_remove} for col in cleaned_item['columns']]
+
+        cleaned_array.append(cleaned_item)
+
+    return cleaned_array

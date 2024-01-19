@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 
 from application.utils import VerifyToken
-from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, NodeUpdate,Job, JobResult, TableUpdate, RelationshipUpdate
+from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, NodeUpdate,Job, JobResult, TableUpdate, RelationshipUpdate, Prompt
 from application.config import get_settings
 
 import worker.main as worker
@@ -98,6 +98,12 @@ async def delete_relationship(project_id: str, relationship_id: str, auth_result
 @router.get("/projects/{project_id}/sql", response_model=Job)
 async def get_project_sql(project_id: str, response: Response, auth_result: str = Security(auth.verify)):
     job = worker.get_project_sql.delay(project_id)
+    response.status_code = status.HTTP_202_ACCEPTED
+    return {"jobId": job.id}
+
+@router.post("/projects/{project_id}/aisuggestedtables", response_model=Job)
+async def generate_table_recommendations(project_id: str, prompt: Prompt, response: Response, auth_result: str = Security(auth.verify)):
+    job = worker.generate_table_recommendations.delay(project_id, prompt.prompt)
     response.status_code = status.HTTP_202_ACCEPTED
     return {"jobId": job.id}
 

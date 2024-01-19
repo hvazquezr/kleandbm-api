@@ -70,6 +70,22 @@ def query_ksql(kdsqldb_cluster, ksql_query):
         print(f"Error querying ksqlDB: {e}")
         return []
 
+def clean_openai_response(response):
+    # Check if the response contains SQL
+    if '```sql' in response and '```' in response.split('```sql')[1]:
+        sql_content = response.split('```sql')[1].split('```')[0].strip()
+        return sql_content, 'sql'
+
+    # Check if the response contains JSON
+    elif '```json' in response and '```' in response.split('```json')[1]:
+        json_content = response.split('```json')[1].split('```')[0].strip()
+        return json_content, 'json'
+    elif response.startswith('{') and response.endswith('}'):
+        return response.strip(), 'json'
+
+    # If the format is unrecognized
+    return response, 'unknown'
+
 # Retrieve only the text between the markers ```json and ``` from OpenAI API responses
 def extract_code_text(input_text, response_type):
     # Define a regular expression pattern to match text between ```json and ```
@@ -114,7 +130,8 @@ def prompt_openai(model, system_message, user_message, response_type = ResponseT
         #response_format={ "type": "json_object" }
       )
       print(response.choices[0].message.content)
-      return extract_code_text(response.choices[0].message.content, response_type)
+      # @TODO: Need to handle the situation where the code is not wrapped in json tags
+      return extract_code_text(response.choices[0].message.content, response_type) 
     except Exception as e:
         print(f"An error occurred: {e}")
         return None

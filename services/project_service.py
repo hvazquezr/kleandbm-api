@@ -147,3 +147,12 @@ class ProjectService:
         user_message = PromptGenerator.get_sql_user_prompt(project)
         sql = services_utils.prompt_openai(ProjectService.settings.openai_model, system_message, user_message, response_type=services_utils.ResponseType.SQL)
         return SQLResponse(sql=sql).model_dump()
+    
+    # Cannot be async because it will be used as Celeri
+    @staticmethod
+    def generate_ai_table_recommendations(id, prompt):
+        project = ProjectService.get_project(id)
+        system_message = PromptGenerator.get_ai_add_table_system_prompt(project)
+        user_message = PromptGenerator.get_ai_add_table_user_prompt(project, prompt)
+        recommended_tables = services_utils.prompt_openai(ProjectService.settings.openai_model, system_message, user_message)
+        return recommended_tables
