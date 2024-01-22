@@ -188,7 +188,6 @@ class ProjectService:
     @staticmethod
     def get_project_imagae(id: str):
     # Define the path where images are stored
-        print(os.getcwd())
         default_image = "project_images/default.png"
         image_path = f"project_images/{id}.png"
 

@@ -116,7 +116,11 @@ async def generate_table_edit_with_ai(project_id: str, table_id: str, user_reque
 
 @router.get("/image/{image_id}")
 async def get_project_image(image_id: str):
-    return ProjectService.get_project_imagae(image_id)
+    response = ProjectService.get_project_imagae(image_id)
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
     
 app.include_router(router)
