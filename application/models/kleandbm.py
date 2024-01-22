@@ -120,9 +120,10 @@ class ProjectCreate(BaseModel):
     owner: Owner
 
 class ProjectUpdate(BaseModel):
-    id: str
+    id: Optional[str] = None
     active: Optional[bool] = True
     name: Optional[str] = None
+    description: Optional[str] = None
 
 class DatabaseTechnology(BaseModel):
     id: DBTechnologyId

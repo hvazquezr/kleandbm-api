@@ -97,6 +97,7 @@ class ProjectService:
 
     @staticmethod
     async def update_project(id, updated_project) -> ProjectUpdate:
+        updated_project.id = id
         await ProjectService.async_kafka_produce('project-updates', id, updated_project.model_dump_json(exclude_none=True))
         return updated_project
     
