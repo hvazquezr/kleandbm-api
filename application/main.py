@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 
 from application.utils import VerifyToken
-from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, NodeUpdate,Job, JobResult, TableUpdate, RelationshipUpdate, Prompt
+from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, NodeUpdate,Job, JobResult, TableUpdate, RelationshipUpdate, AITablesUpdate
 from application.config import get_settings
 
 import worker.main as worker
@@ -32,6 +32,7 @@ auth = VerifyToken()
 @router.post("/projects", response_model=Job, status_code=202)
 async def create_project(new_project: ProjectCreate, response: Response, auth_result: str = Security(auth.verify)):
     job = worker.create_project.delay(new_project.model_dump(exclude_none=True))
+    #worker.generate_project_image.delay(new_project.id, new_project.questions)
     response.status_code = status.HTTP_202_ACCEPTED
     return {"jobId": job.id}
 
@@ -69,8 +70,8 @@ async def delete_project(project_id: str, auth_result: str = Security(auth.verif
     return Response(status_code = status.HTTP_204_NO_CONTENT)
 
 @router.patch("/projects/{project_id}/nodes/{node_id}", response_model= NodeUpdate)
-async def update_node(project_id: str, updated_node: NodeUpdate, auth_result: str = Security(auth.verify)):
-    return (await ProjectService.update_node(project_id, updated_node))
+async def update_node(project_id: str, node_id:str, updated_node: NodeUpdate, auth_result: str = Security(auth.verify)):
+    return (await ProjectService.update_node(project_id, node_id, updated_node))
 
 @router.delete("/projects/{project_id}/nodes/{node_id}", status_code=204)
 async def delete_node(project_id: str, node_id: str, auth_result: str = Security(auth.verify)):
@@ -78,8 +79,8 @@ async def delete_node(project_id: str, node_id: str, auth_result: str = Security
     return Response(status_code = status.HTTP_204_NO_CONTENT)
 
 @router.patch("/projects/{project_id}/tables/{table_id}", response_model= TableUpdate)
-async def update_table(project_id: str, updated_table: TableUpdate, auth_result: str = Security(auth.verify)):
-    return (await ProjectService.update_table(project_id, updated_table))
+async def update_table(project_id: str, table_id:str, updated_table: TableUpdate, auth_result: str = Security(auth.verify)):
+    return (await ProjectService.update_table(project_id, table_id, updated_table))
 
 @router.delete("/projects/{project_id}/tables/{table_id}", status_code=204)
 async def delete_table(project_id: str, table_id: str, auth_result: str = Security(auth.verify)):
@@ -87,8 +88,8 @@ async def delete_table(project_id: str, table_id: str, auth_result: str = Securi
     return Response(status_code = status.HTTP_204_NO_CONTENT)
 
 @router.patch("/projects/{project_id}/relationships/{relationship_id}", response_model= RelationshipUpdate)
-async def update_relationship(project_id: str, updated_relationship: RelationshipUpdate, auth_result: str = Security(auth.verify)):
-    return (await ProjectService.update_relationship(project_id, updated_relationship))
+async def update_relationship(project_id: str, relationship_id: str, updated_relationship: RelationshipUpdate, auth_result: str = Security(auth.verify)):
+    return (await ProjectService.update_relationship(project_id, relationship_id, updated_relationship))
 
 @router.delete("/projects/{project_id}/relationships/{relationship_id}", status_code=204)
 async def delete_relationship(project_id: str, relationship_id: str, auth_result: str = Security(auth.verify)):
@@ -102,8 +103,8 @@ async def get_project_sql(project_id: str, response: Response, auth_result: str 
     return {"jobId": job.id}
 
 @router.post("/projects/{project_id}/aisuggestedtables", response_model=Job)
-async def generate_table_recommendations_with_ai(project_id: str, prompt: Prompt, response: Response, auth_result: str = Security(auth.verify)):
-    job = worker.generate_table_recommendations.delay(project_id, prompt.prompt)
+async def generate_table_recommendations_with_ai(project_id: str, aiTableUpdate: AITablesUpdate, response: Response, auth_result: str = Security(auth.verify)):
+    job = worker.generate_table_recommendations.delay(project_id, aiTableUpdate.prompt, aiTableUpdate.position.model_dump())
     response.status_code = status.HTTP_202_ACCEPTED
     return {"jobId": job.id}
 
@@ -111,7 +112,11 @@ async def generate_table_recommendations_with_ai(project_id: str, prompt: Prompt
 async def generate_table_edit_with_ai(project_id: str, table_id: str, user_request: dict, response: Response, auth_result: str = Security(auth.verify)):
     job = worker.generate_table_edits.delay(project_id, user_request)
     response.status_code = status.HTTP_202_ACCEPTED
-    return {"jobId": job.id}  
+    return {"jobId": job.id}
+
+@router.get("/image/{image_id}")
+async def get_project_image(image_id: str):
+    return ProjectService.get_project_imagae(image_id)
 
     
 app.include_router(router)

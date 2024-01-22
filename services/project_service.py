@@ -1,11 +1,13 @@
 import json
+import os
+from fastapi.responses import FileResponse
 from confluent_kafka import Producer
-import asyncio
 from application.models.PromptGenerator import PromptGenerator
 from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, NodeUpdate, TableUpdate, RelationshipUpdate, SQLResponse
 from application.config import get_settings
 import services.utils as services_utils
 from typing import List
+
 
 class ProjectService:
     settings = get_settings()
@@ -36,7 +38,8 @@ class ProjectService:
         # @TODO: Determine if it's best to move Save to the Project datatype
         suggested_data_model = services_utils.complete_project(project_id, raw_data_model)
         nodes = services_utils.generate_nodes(suggested_data_model, project_id)
-
+        
+        new_project.description = suggested_data_model['description']
         ProjectService.kafka_produce('project-updates', project_id, new_project.model_dump_json(exclude_none=True))
         for table in suggested_data_model['tables']:
             ProjectService.kafka_produce('table-updates', project_id, json.dumps(table)) # Saving tables
@@ -103,7 +106,8 @@ class ProjectService:
         await ProjectService.async_kafka_produce('project-updates', id, to_delete_project.model_dump_json(exclude_none=True))
 
     @staticmethod
-    async def update_node(project_id, updated_node) -> NodeUpdate:
+    async def update_node(project_id, node_id, updated_node) -> NodeUpdate:
+        updated_node.id = node_id
         await ProjectService.async_kafka_produce('node-updates', project_id, updated_node.model_dump_json(exclude_none=True))
         await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
         return updated_node
@@ -115,7 +119,8 @@ class ProjectService:
         await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
 
     @staticmethod
-    async def update_table(project_id, updated_table) -> TableUpdate:
+    async def update_table(project_id, table_id, updated_table) -> TableUpdate:
+        updated_table.id = table_id
         await ProjectService.async_kafka_produce('table-updates', project_id, updated_table.model_dump_json(exclude_none=True))
         await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
         return updated_table
@@ -127,7 +132,9 @@ class ProjectService:
         await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
 
     @staticmethod
-    async def update_relationship(project_id, updated_relationship) -> RelationshipUpdate:
+    async def update_relationship(project_id, relationship_id, updated_relationship) -> RelationshipUpdate:
+        updated_relationship.projectId = project_id
+        updated_relationship.id = relationship_id
         await ProjectService.async_kafka_produce('relationship-updates', project_id, updated_relationship.model_dump_json(exclude_none=True))
         await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
         return updated_relationship
@@ -150,12 +157,15 @@ class ProjectService:
     
     # Cannot be async because it will be used as Celeri
     @staticmethod
-    def generate_ai_table_recommendations(id, prompt):
+    def generate_ai_table_recommendations(id, prompt, position):
         project = ProjectService.get_project(id)
+        response = {}
         system_message = PromptGenerator.get_ai_add_table_system_prompt(project)
         user_message = PromptGenerator.get_ai_add_table_user_prompt(project, prompt)
-        recommended_tables = json.loads(services_utils.prompt_openai(ProjectService.settings.openai_model, system_message, user_message))
-        return recommended_tables
+        response['tables'] = json.loads(services_utils.prompt_openai(ProjectService.settings.openai_model, system_message, user_message))
+        response = services_utils.complete_project(id, response)
+        response = services_utils.complete_response_for_ai_tables(response, project.model_dump(),  position)
+        return response
 
     # Cannot be async because it will be used as Celeri
     @staticmethod
@@ -167,3 +177,22 @@ class ProjectService:
         response = json.loads(openai_response)
         services_utils.generate_id_if_missing(response['columns'])
         return response
+    
+    # Cannot be async because it will be used as Celeri
+    @staticmethod
+    def generate_image(id, questions):
+        prompt = PromptGenerator.get_image_generation_prompt(questions)
+        services_utils.generate_image(id, prompt)
+
+    @staticmethod
+    def get_project_imagae(id: str):
+    # Define the path where images are stored
+        print(os.getcwd())
+        default_image = "project_images/default.png"
+        image_path = f"project_images/{id}.png"
+
+        # Check if the image exists
+        if os.path.exists(image_path):
+            return FileResponse(image_path)
+        else:
+            return FileResponse(default_image)

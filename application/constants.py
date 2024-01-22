@@ -1,6 +1,6 @@
 OPENAI_PROMPT_TEMPLATES = {
     'createProjectSystemMessage': "Act as a data architect. Design a relational database and provide a project \
-description for a {project_type} system in {db_technology_name} \
+description for a {project_type} database in {db_technology_name} (Don't include the name of the technology in the description)\
 using {model_type} based on a series of business questions, a set of naming rules, and some other information.\n\n\
 The response should be a JSON array of tables with the format {{description:project description (no more than 250 characters), tables:[{{name:tableName, description:table desciption (no more than 100 characters), columns:[{{name:Column Name, description: column description (no more than 100 characters), primaryKey: (true if it is primary key), dataType: data type}},..]]}}}}.\n\n\
 {type_2_dimension}\
@@ -34,7 +34,9 @@ Current table structure:\n\n\n{table_structure}",
                 ],\n\
                 'description': (Description for table),\n\
                 'name': (Suggested name)\n\
-}"    
+}",    
+    #'generateImagePrompt': "Create a realistic photograph that illustrates or represents the important concepts in the following questions. \nQuestiosn:\n {questions}"
+    'generateImagePrompt': "Act as a graphic artist. Create a photograph that represents the importnat concepts in the following description: {questions}"
 }
 
 DEFAULT_ANALYTICAL_NAMING_RULES = "Use DIM prefix for dimension tables and FACT prefix for fact tables.\n\

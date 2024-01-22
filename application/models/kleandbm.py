@@ -25,10 +25,10 @@ class Table(BaseModel):
     active: bool
     columns: List[Column]
     lastModified: int
-    projectId: Optional[str]
+    projectId: Optional[str] = None
 
 class TableUpdate(BaseModel):
-    id: str
+    id: str = None
     name: Optional[str] = None
     description: Optional[str] = None
     active: Optional[bool] = None
@@ -38,7 +38,7 @@ class TableUpdate(BaseModel):
 
 class Node(BaseModel):
     id: str
-    projectId: Optional[str]
+    projectId: Optional[str] = None
     active: bool
     lastModified: int
     tableId: str
@@ -46,7 +46,7 @@ class Node(BaseModel):
     y: float
 
 class NodeUpdate(BaseModel):
-    id: str
+    id: Optional[str] = None
     projectId: Optional[str] = None
     active: Optional[bool] = True
     tableId: Optional[str] = None
@@ -59,15 +59,16 @@ class Relationship(BaseModel):
     childColumn: str
     active: bool
     identifying: bool
-    label: Optional[str]
+    label: Optional[str] = None
 
 class RelationshipUpdate(BaseModel):
-    id: str
-    parentColumn: Optional[str]
-    childColumn: Optional[str]
+    id: Optional[str] = None
+    projectId: Optional[str] = None
+    parentColumn: Optional[str] = None
+    childColumn: Optional[str] = None
     active: Optional[bool] = True
     identifying: Optional[bool] = None
-    label: Optional[str]
+    label: Optional[str] = None
 
 class DBTechnologyId(IntEnum):
     SNOWFLAKE = 1
@@ -115,6 +116,8 @@ class ProjectCreate(BaseModel):
     questions: str
     additionalInfo: Optional[str] = None
     namingRules: Optional[str] = None
+    description: str
+    owner: Owner
 
 class ProjectUpdate(BaseModel):
     id: str
@@ -129,8 +132,14 @@ class DatabaseTechnology(BaseModel):
 class SQLResponse(BaseModel):
     sql: str
 
-class Prompt(BaseModel):
+class Position(BaseModel):
+    x: float
+    y: float
+
+class AITablesUpdate(BaseModel):
     prompt: str
+    position: Position
+
 
 class DatabaseTechnologies:
 
