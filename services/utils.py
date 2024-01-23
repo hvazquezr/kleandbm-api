@@ -151,7 +151,7 @@ def process_b64_json_to_image(b64_json_data, path, id):
     image = Image.open(io.BytesIO(image_data))
 
     # Resize the image
-    resized_image = image.resize((302, 302))
+    resized_image = image.resize((300, 300))
 
     # Save or re-encode as needed
     # For instance, saving to a file
