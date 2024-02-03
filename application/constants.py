@@ -2,7 +2,7 @@ OPENAI_PROMPT_TEMPLATES = {
     'createProjectSystemMessage': "Act as a data architect. Design a relational database and provide a project \
 description for a {project_type} database in {db_technology_name} (Don't include the name of the technology in the description)\
 using {model_type} based on a series of business questions, a set of naming rules, and some other information.\n\n\
-The response should be a JSON array of tables with the format {{description:project description (no more than 250 characters), tables:[{{name:tableName, description:table desciption (no more than 100 characters), columns:[{{name:Column Name, description: column description (no more than 100 characters), primaryKey: (true if it is primary key), dataType: data type}},..]]}}}}.\n\n\
+The response should be a JSON array of tables with the format {{description:project description (no more than 250 characters), tables:[{{name:tableName, description:table desciption (no more than 100 characters), columns:[{{name:Column Name, description: column description (no more than 100 characters), primaryKey: (true if it is primary key), dataType: data type, maxLength: (if applicable), precision: (if applicable), scale: (if applicable), canBeNull: (boolean to indicate if it can hold null values)}},..]]}}}}.\n\n\
 {type_2_dimension}\
 Only include the following datatypes: {data_types}\n\n\
 Only include the json array and not additional context.",
@@ -29,7 +29,10 @@ Current table structure:\n\n\n{table_structure}",
                         'description': (Description for column),\n\
                         'id': (Omit if it is newly suggested column),\n\
                         'name': (name for column),\n\
-                        'primaryKey': (true if column is intended to be primary key)\n\
+                        'primaryKey': (true if column is intended to be primary key),\n\
+                        'maxLength': (if applicable),\n\
+                        'precision': (if applicable),\n\
+                        'scale': (if applicable),\n\
                     },\n\
                 ],\n\
                 'description': (Description for table),\n\

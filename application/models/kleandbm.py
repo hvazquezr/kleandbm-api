@@ -16,7 +16,12 @@ class Column(BaseModel):
     name: str
     description: str
     dataType: str
-    primaryKey: bool
+    maxLength:  Optional[int] = None
+    precision:  Optional[int] = None
+    scale:  Optional[int] = None
+    primaryKey:  Optional[bool] = None
+    canBeNull:  Optional[bool] = None
+    autoIncrementOn:  Optional[bool] = None
 
 class Table(BaseModel):
     id: str
