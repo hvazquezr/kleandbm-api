@@ -134,6 +134,7 @@ def prompt_openai(model, system_message, user_message, response_type = ResponseT
       )
       #print(response.choices[0].message.content)
       # @TODO: Need to handle the situation where the code is not wrapped in json tags
+      print(response.choices[0].message.content)
       result = extract_code_text(response.choices[0].message.content, response_type) 
       print(result)
       return result

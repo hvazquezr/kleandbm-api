@@ -39,7 +39,7 @@ Current table structure:\n\n\n{table_structure}",
                 'name': (Suggested name)\n\
 }",    
     #'generateImagePrompt': "Create a realistic photograph that illustrates or represents the important concepts in the following questions. \nQuestiosn:\n {questions}"
-    'generateImagePrompt': 'Act as a graphic artist. Create a photograph-style image to represent the following: "{questions}"'
+    'generateImagePrompt': 'Act as a graphic artist. From the following description extract real life keywors and create an image to represent them: "{questions}"'
 }
 
 DEFAULT_ANALYTICAL_NAMING_RULES = "Use DIM prefix for dimension tables and FACT prefix for fact tables.\n\
