@@ -34,6 +34,9 @@ class ProjectService:
         system_message = PromptGenerator.get_create_project_sytem_prompt(new_project)
         user_message = PromptGenerator.get_create_project_user_prompt(new_project)
         raw_data_model = json.loads(services_utils.prompt_openai(ProjectService.settings.openai_model, system_message, user_message))
+        # In some cases openai is returning an array; in that case it gathers the first element of the array
+        if isinstance(raw_data_model, list):
+            raw_data_model = raw_data_model[0]
         # @TODO: This should be of Project data Type
         # @TODO: Determine if it's best to move Save to the Project datatype
         suggested_data_model = services_utils.complete_project(project_id, raw_data_model)

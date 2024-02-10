@@ -104,7 +104,7 @@ def extract_code_text(input_text, response_type):
         json_text = match.group(1).strip()
         return json_text
     else:
-        return None
+        return input_text
 
 # Prompts OpenAI
 def prompt_openai(model, system_message, user_message, response_type = ResponseType.JSON):
