@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional, Union, Any
+from typing import List, Optional, Any
 from enum import Enum, IntEnum
 
 class Job(BaseModel):
@@ -10,6 +10,10 @@ class JobResult(BaseModel):
     status: str
     #how to do this for when tables are suggested
     result: Any = None
+
+class NodeType(str, Enum):
+    TABLE = "tableNode"
+    NOTE = "noteNode"
 
 class Column(BaseModel):
     id: str
@@ -44,17 +48,25 @@ class TableUpdate(BaseModel):
 class Node(BaseModel):
     id: str
     projectId: Optional[str] = None
+    type: Optional[NodeType] = None
     active: bool
     lastModified: int
-    tableId: str
+    tableId: Optional[str] = None
+    text: Optional[str] = None
+    width: Optional[float] = None
+    height: Optional[float] = None
     x: float
     y: float
 
 class NodeUpdate(BaseModel):
     id: Optional[str] = None
     projectId: Optional[str] = None
+    type: Optional[NodeType] = None
     active: Optional[bool] = True
     tableId: Optional[str] = None
+    text: Optional[str] = None
+    width: Optional[float] = None
+    height: Optional[float] = None
     x: Optional[float] = None
     y: Optional[float] = None
 

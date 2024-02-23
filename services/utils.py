@@ -252,7 +252,8 @@ def generate_nodes(json_data, project_id):
             "x": float(value[0]),  # Convert numpy float to Python float
             "y": float(value[1]),   # Convert numpy float to Python float
             "active": True,
-            "projectId": project_id
+            "projectId": project_id,
+            "type": 'tableNode'
         }
         for key, value in pos.items()
     ]
@@ -307,7 +308,8 @@ def complete_response_for_ai_tables(new_tables, existing_nodes, position):
             "id": generate(),
             "position":{"x":x_position, "y":y_position},
             "data": table,
-            "new": True
+            "new": True,
+            "type": 'tableNode'
         }
         new_nodes.append(node)
         y_position += 300 # TODO: Maybe multiple a factor by number of rows?
