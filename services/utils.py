@@ -9,7 +9,6 @@ from openai import OpenAI
 from application.config import get_settings
 import networkx as nx
 from enum import Enum
-from PIL import Image
 
 class ResponseType(str, Enum):
     JSON = "json"
@@ -142,38 +141,6 @@ def prompt_openai(model, system_message, user_message, response_type = ResponseT
         print(f"An error occurred: {e}")
         return None
     
-
-def process_b64_json_to_image(b64_json_data, path, id):
-
-    # Decode the base64 data to get the binary data of the image
-    image_data = base64.b64decode(b64_json_data)
-
-    # Read the image data into PIL
-    image = Image.open(io.BytesIO(image_data))
-
-    # Resize the image
-    resized_image = image.resize((300, 300))
-
-    # Save or re-encode as needed
-    # For instance, saving to a file
-    resized_image.save(f"{path}{id}.png")
-    
-
-def generate_image(project_id, prompt):
-    client = OpenAI(api_key=get_settings().openai_key)
-    response = client.images.generate(
-    model="dall-e-3",
-    prompt=prompt,
-    size="1024x1024",
-    quality="standard",
-    n=1,
-    response_format="b64_json",
-    style="natural"
-    )
-
-    b64_json_output = response.data[0].b64_json
-
-    process_b64_json_to_image(b64_json_output, "project_images/", project_id)
 
 #Function to complete json project by adding active flag, project id and relationships
 def complete_project(project_id, schema_json):

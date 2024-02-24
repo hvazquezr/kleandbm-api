@@ -37,11 +37,7 @@ Current table structure:\n\n\n{table_structure}",
                 ],\n\
                 'description': (Description for table),\n\
                 'name': (Suggested name)\n\
-}",    
-    #'generateImagePrompt': "Create a realistic photograph that illustrates or represents the important concepts in the following questions. \nQuestiosn:\n {questions}"
-    #'generateImagePrompt': 'Act as a graphic artist. From the following description ignore words like "system", "database", "analyze" and "track" and create an image that represents the the remaining concepts: "{questions}"'
-    'generateImagePrompt': 'Act as a graphic artist. From the following description ignore words like "system", "database", "analyze" and "track". Pick the most important item and create an image that represents it: "{questions}"'
-}
+}"}
 
 DEFAULT_ANALYTICAL_NAMING_RULES = "Use DIM prefix for dimension tables and FACT prefix for fact tables.\n\
 Use underscore to separate words.\n\

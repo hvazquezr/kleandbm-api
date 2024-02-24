@@ -74,7 +74,3 @@ Fact tables should not have a record id; the ids from the dimensions should be s
                                           data_types = (", ".join(database_technology.dataTypes)), \
                                           reference_structure=structure, \
                                           table_structure = json.dumps(table_structure))
-    
-    @staticmethod
-    def get_image_generation_prompt(questions: str):
-        return PromptGenerator.get_prompt("generateImagePrompt", questions=questions)

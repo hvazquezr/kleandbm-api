@@ -181,21 +181,3 @@ class ProjectService:
         response = json.loads(openai_response)
         services_utils.generate_id_if_missing(response['columns'])
         return response
-    
-    # Cannot be async because it will be used as Celeri
-    @staticmethod
-    def generate_image(id, questions):
-        prompt = PromptGenerator.get_image_generation_prompt(questions)
-        services_utils.generate_image(id, prompt)
-
-    @staticmethod
-    def get_project_imagae(id: str):
-    # Define the path where images are stored
-        default_image = "project_images/default.png"
-        image_path = f"project_images/{id}.png"
-
-        # Check if the image exists
-        if os.path.exists(image_path):
-            return FileResponse(image_path)
-        else:
-            return FileResponse(default_image)

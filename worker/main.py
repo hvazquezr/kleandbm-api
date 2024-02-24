@@ -18,7 +18,6 @@ celery.conf.update(
 @celery.task(name="create_project")
 def create_project(new_project):
     result = ProjectService.create_project(ProjectCreate(**new_project))
-    generate_project_image.delay(new_project['id'], result['description'])
     return result
 
 @celery.task(name="get_sql")
@@ -35,7 +34,3 @@ def generate_table_recommendations(project_id, prompt, position):
 def generate_table_edits(project_id, user_request):
     result = ProjectService.generate_ai_table_edits(project_id, user_request)
     return result
-
-@celery.task(name="generate_project_image")
-def generate_project_image(project_id, questions):
-    ProjectService.generate_image(project_id, questions)

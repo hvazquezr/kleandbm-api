@@ -32,7 +32,6 @@ auth = VerifyToken()
 @router.post("/projects", response_model=Job, status_code=202)
 async def create_project(new_project: ProjectCreate, response: Response, auth_result: str = Security(auth.verify)):
     job = worker.create_project.delay(new_project.model_dump(exclude_none=True))
-    #worker.generate_project_image.delay(new_project.id, new_project.questions)
     response.status_code = status.HTTP_202_ACCEPTED
     return {"jobId": job.id}
 
@@ -113,14 +112,6 @@ async def generate_table_edit_with_ai(project_id: str, table_id: str, user_reque
     job = worker.generate_table_edits.delay(project_id, user_request)
     response.status_code = status.HTTP_202_ACCEPTED
     return {"jobId": job.id}
-
-@router.get("/image/{image_id}")
-async def get_project_image(image_id: str):
-    response = ProjectService.get_project_imagae(image_id)
-    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
-    response.headers["Pragma"] = "no-cache"
-    response.headers["Expires"] = "0"
-    return response
 
     
 app.include_router(router)
