@@ -1,9 +1,7 @@
 import json
-import os
-from fastapi.responses import FileResponse
 from confluent_kafka import Producer
 from application.models.PromptGenerator import PromptGenerator
-from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, NodeUpdate, TableUpdate, RelationshipUpdate, SQLResponse
+from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, NodeUpdate, TableUpdate, RelationshipUpdate, SQLResponse, DatabaseTechnologies, DBTechnologyId
 from application.config import get_settings
 import services.utils as services_utils
 from typing import List
@@ -149,14 +147,12 @@ class ProjectService:
         await ProjectService.async_kafka_produce('relationship-updates', project_id, to_delete_relationship.model_dump_json(exclude_none=True))
         await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
 
-    # Cannot be async because it will be used as Celeri
     @staticmethod
-    def get_project_sql(id):
-        project = ProjectService.get_project(id)
-        del project.nodes
-        system_message = PromptGenerator.get_sql_system_prompt(project)
-        user_message = PromptGenerator.get_sql_user_prompt(project)
-        sql = services_utils.prompt_openai(ProjectService.settings.openai_model, system_message, user_message, response_type=services_utils.ResponseType.SQL)
+    async def get_project_sql(id):
+        project = (await ProjectService.async_get_project(id))
+        db_technlogy = DatabaseTechnologies.get_technology_by_id(project.dbTechnology)
+        #if (db_technlogy.id == DBTechnologyId.SNOWFLAKE):
+        sql = DatabaseTechnologies.generate_ddl_snowflake(project)
         return SQLResponse(sql=sql).model_dump()
     
     # Cannot be async because it will be used as Celeri

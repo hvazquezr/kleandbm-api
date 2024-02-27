@@ -20,11 +20,6 @@ def create_project(new_project):
     result = ProjectService.create_project(ProjectCreate(**new_project))
     return result
 
-@celery.task(name="get_sql")
-def get_project_sql(project_id):
-    result = ProjectService.get_project_sql(project_id)
-    return result
-
 @celery.task(name="generate_table_recommendations")
 def generate_table_recommendations(project_id, prompt, position):
     result = ProjectService.generate_ai_table_recommendations(project_id, prompt, position)

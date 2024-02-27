@@ -191,3 +191,59 @@ class DatabaseTechnologies:
                 return technology
         return None
 
+    @staticmethod
+    def generate_ddl_snowflake(data):
+        ddl_statements = []
+
+        # Generate DDL for tables
+        for table in data.tables:  # Changed to attribute access
+            create_statement = f"CREATE TABLE {table.name} (\n"  # Changed to attribute access
+            col_definitions = []
+            pk = []
+
+            for col in table.columns:  # Changed to attribute access
+                col_def = f"    {col.name} {col.dataType}"  # Changed to attribute access
+                if col.dataType.upper() == 'VARCHAR' and col.maxLength:  # Changed to attribute access
+                    col_def += f"({col.maxLength})"  # Changed to attribute access
+                elif col.dataType.upper() in ['DECIMAL', 'NUMERIC', 'FLOAT'] and col.precision:  # Changed to attribute access
+                    col_def += f"({col.precision}"  # Changed to attribute access
+                    if col.scale:  # Changed to attribute access
+                        col_def += f", {col.scale})"  # Changed to attribute access
+                    else:
+                        col_def += ")"
+                if not col.canBeNull:  # Changed to attribute access
+                    col_def += " NOT NULL"
+                col_definitions.append(col_def)
+                if col.primaryKey:  # Changed to attribute access
+                    pk.append(col.name)  # Changed to attribute access
+
+            if pk:
+                pk_statement = f",\n    PRIMARY KEY ({', '.join(pk)})"
+                col_definitions.append(pk_statement)
+
+            create_statement += ",\n".join(col_definitions)
+            create_statement += "\n);"
+            ddl_statements.append(create_statement)
+
+            # Add table comment
+            ddl_statements.append(f"COMMENT ON TABLE {table.name} IS '{table.description}';")  # Changed to attribute access
+
+            # Add column comments
+            for col in table.columns:  # Changed to attribute access
+                ddl_statements.append(f"COMMENT ON COLUMN {table.name}.{col.name} IS '{col.description}';")  # Changed to attribute access
+
+        # Generate DDL for relationships (assuming foreign key constraints are desired)
+        for rel in data.relationships:  # Changed to attribute access
+            ddl_statements.append(f"ALTER TABLE {DatabaseTechnologies.find_table_name_by_column(data, rel.childColumn)} "  # Changed to attribute access
+                                f"ADD CONSTRAINT FK_{rel.childColumn}_{rel.parentColumn} FOREIGN KEY ({rel.childColumn}) "  # Changed to attribute access
+                                f"REFERENCES {DatabaseTechnologies.find_table_name_by_column(data, rel.parentColumn)}({rel.parentColumn});")  # Changed to attribute access
+
+        return "\n\n".join(ddl_statements)
+
+    @staticmethod
+    def find_table_name_by_column(data, column_id):
+        for table in data.tables:  # Changed to attribute access
+            for col in table.columns:  # Changed to attribute access
+                if col.id == column_id:  # Changed to attribute access
+                    return table.name  # Changed to attribute access
+        return None

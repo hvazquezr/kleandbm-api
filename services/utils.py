@@ -1,8 +1,6 @@
 import json
 import re
 import requests
-import base64
-import io
 import aiohttp
 from nanoid import generate
 from openai import OpenAI
