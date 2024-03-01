@@ -150,9 +150,7 @@ class ProjectService:
     @staticmethod
     async def get_project_sql(id):
         project = (await ProjectService.async_get_project(id))
-        db_technlogy = DatabaseTechnologies.get_technology_by_id(project.dbTechnology)
-        #if (db_technlogy.id == DBTechnologyId.SNOWFLAKE):
-        sql = DatabaseTechnologies.generate_ddl_snowflake(project)
+        sql = DatabaseTechnologies.generate_ddl_sql(project)
         return SQLResponse(sql=sql).model_dump()
     
     # Cannot be async because it will be used as Celeri

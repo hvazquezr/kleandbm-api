@@ -190,6 +190,17 @@ class DatabaseTechnologies:
             if technology.id == technology_id:
                 return technology
         return None
+    
+    @staticmethod
+    def generate_ddl_sql(project):
+        if project.dbTechnology == DBTechnologyId.SNOWFLAKE:
+            return DatabaseTechnologies.generate_ddl_snowflake(project)
+        elif project.dbTechnology == DBTechnologyId.DATABRICKS:
+            return DatabaseTechnologies.generate_ddl_databricks(project)
+        elif project.dbTechnology == DBTechnologyId.MSSQL:
+            return DatabaseTechnologies.generate_ddl_sql_server(project)
+        elif project.dbTechnology == DBTechnologyId.MYSQL:
+            return DatabaseTechnologies.generate_ddl_mysql(project)
 
     @staticmethod
     def generate_ddl_snowflake(data):
@@ -205,7 +216,7 @@ class DatabaseTechnologies:
                 col_def = f"    {col.name} {col.dataType}"  # Changed to attribute access
                 if col.dataType.upper() == 'VARCHAR' and col.maxLength:  # Changed to attribute access
                     col_def += f"({col.maxLength})"  # Changed to attribute access
-                elif col.dataType.upper() in ['DECIMAL', 'NUMERIC', 'FLOAT'] and col.precision:  # Changed to attribute access
+                elif col.dataType.upper() in ['DECIMAL', 'NUMBER', 'FLOAT'] and col.precision:  # Changed to attribute access
                     col_def += f"({col.precision}"  # Changed to attribute access
                     if col.scale:  # Changed to attribute access
                         col_def += f", {col.scale})"  # Changed to attribute access
@@ -218,7 +229,7 @@ class DatabaseTechnologies:
                     pk.append(col.name)  # Changed to attribute access
 
             if pk:
-                pk_statement = f",\n    PRIMARY KEY ({', '.join(pk)})"
+                pk_statement = f"\n    PRIMARY KEY ({', '.join(pk)})"
                 col_definitions.append(pk_statement)
 
             create_statement += ",\n".join(col_definitions)
@@ -233,17 +244,206 @@ class DatabaseTechnologies:
                 ddl_statements.append(f"COMMENT ON COLUMN {table.name}.{col.name} IS '{col.description}';")  # Changed to attribute access
 
         # Generate DDL for relationships (assuming foreign key constraints are desired)
-        for rel in data.relationships:  # Changed to attribute access
-            ddl_statements.append(f"ALTER TABLE {DatabaseTechnologies.find_table_name_by_column(data, rel.childColumn)} "  # Changed to attribute access
-                                f"ADD CONSTRAINT FK_{rel.childColumn}_{rel.parentColumn} FOREIGN KEY ({rel.childColumn}) "  # Changed to attribute access
-                                f"REFERENCES {DatabaseTechnologies.find_table_name_by_column(data, rel.parentColumn)}({rel.parentColumn});")  # Changed to attribute access
+        for rel in data.relationships:
+                parent_table_name, parent_column_name = DatabaseTechnologies.find_table_name_and_column_name_by_column_id(data, rel.parentColumn)
+                child_table_name, child_column_name = DatabaseTechnologies.find_table_name_and_column_name_by_column_id(data, rel.childColumn)
+                
+                if parent_table_name and child_table_name and parent_column_name and child_column_name:
+                    ddl_statements.append(f"ALTER TABLE {child_table_name} "
+                                        f"ADD CONSTRAINT FK_{child_table_name}_{parent_table_name} "
+                                        f"FOREIGN KEY ({child_column_name}) "
+                                        f"REFERENCES {parent_table_name}({parent_column_name});")
 
         return "\n\n".join(ddl_statements)
 
     @staticmethod
-    def find_table_name_by_column(data, column_id):
-        for table in data.tables:  # Changed to attribute access
-            for col in table.columns:  # Changed to attribute access
-                if col.id == column_id:  # Changed to attribute access
-                    return table.name  # Changed to attribute access
-        return None
+    def generate_ddl_sql_server(data):
+        ddl_statements = []
+
+        # Generate DDL for tables
+        for table in data.tables:
+            create_statement = f"CREATE TABLE {table.name} (\n"
+            col_definitions = []
+            pk = []
+
+            for col in table.columns:
+                # Check for autoIncrement property
+                if col.autoIncrementOn:
+                    auto_increment = " IDENTITY(1,1)"
+                else:
+                    auto_increment = ""
+
+                col_def = f"    {col.name} {col.dataType}{auto_increment}"
+                if col.dataType.upper() == 'VARCHAR' and col.maxLength:
+                    col_def += f"({col.maxLength})"
+                elif col.dataType.upper() in ['DECIMAL', 'NUMERIC', 'FLOAT'] and col.precision:
+                    col_def += f"({col.precision}"
+                    if col.scale:
+                        col_def += f", {col.scale})"
+                    else:
+                        col_def += ")"
+                if not col.canBeNull:
+                    col_def += " NOT NULL"
+                col_definitions.append(col_def)
+                if col.primaryKey:
+                    pk.append(col.name)
+
+            if pk:
+                # In SQL Server, IDENTITY should be used on the primary key column if autoIncrement is specified
+                pk_statement = f"    CONSTRAINT PK_{table.name} PRIMARY KEY ({', '.join(pk)})"
+                col_definitions.append(pk_statement)
+
+            create_statement += ",\n".join(col_definitions)
+            create_statement += "\n)"
+            ddl_statements.append(create_statement)
+
+        # Generate comments statements
+        for table in data.tables:
+            # Add table description
+            ddl_statements.append(f"EXEC sp_addextendedproperty "
+                                  f"'MS_Description', '{table.description}', "
+                                  f"'SCHEMA', 'dbo', 'TABLE', '{table.name}';")
+            
+            # Add column descriptions
+            for col in table.columns:
+                ddl_statements.append(f"EXEC sp_addextendedproperty "
+                                      f"'MS_Description', '{col.description}', "
+                                      f"'SCHEMA', 'dbo', 'TABLE', '{table.name}', 'COLUMN', '{col.name}';")
+
+        # Generate DDL for relationships
+        for rel in data.relationships:
+            parent_table_name, parent_column_name = DatabaseTechnologies.find_table_name_and_column_name_by_column_id(data, rel.parentColumn)
+            child_table_name, child_column_name = DatabaseTechnologies.find_table_name_and_column_name_by_column_id(data, rel.childColumn)
+            
+            if parent_table_name and child_table_name and parent_column_name and child_column_name:
+                ddl_statements.append(f"ALTER TABLE {child_table_name} "
+                                      f"ADD CONSTRAINT FK_{child_table_name}_{parent_table_name} "
+                                      f"FOREIGN KEY ({child_column_name}) "
+                                      f"REFERENCES {parent_table_name}({parent_column_name});")
+                
+        return "\n\n".join(ddl_statements)
+    
+
+    @staticmethod
+    def generate_ddl_mysql(data):
+        ddl_statements = []
+
+        # Generate DDL for tables
+        for table in data.tables:
+            create_statement = f"CREATE TABLE `{table.name}` (\n"
+            col_definitions = []
+            pk = []
+
+            for col in table.columns:
+                col_def = f"`{col.name}` {col.dataType}"
+                if col.dataType.upper() == 'VARCHAR' and col.maxLength:
+                    col_def += f"({col.maxLength})"
+                elif col.dataType.upper() in ['DECIMAL', 'NUMERIC', 'FLOAT'] and col.precision:
+                    col_def += f"({col.precision}"
+                    if col.scale:
+                        col_def += f", {col.scale})"
+                    else:
+                        col_def += ")"
+                if col.autoIncrementOn:
+                    col_def += " AUTO_INCREMENT"
+                if not col.canBeNull:
+                    col_def += " NOT NULL"
+                if col.description:
+                    col_def += f" COMMENT '{col.description}'"
+                col_definitions.append(col_def)
+                if col.primaryKey:
+                    pk.append(col.name)
+
+            if pk:
+                pk_statement = f",\n    PRIMARY KEY (`{'`, `'.join(pk)}`)"
+                col_definitions.append(pk_statement)
+
+            create_statement += ",\n".join(col_definitions)
+            create_statement += "\n);"
+            if table.description:
+                create_statement += f"\n) COMMENT='{table.description}';"
+            ddl_statements.append(create_statement)
+
+        # Generate DDL for relationships
+        for rel in data.relationships:
+            parent_table_name, parent_column_name = DatabaseTechnologies.find_table_name_and_column_name_by_column_id(data, rel.parentColumn)
+            child_table_name, child_column_name = DatabaseTechnologies.find_table_name_and_column_name_by_column_id(data, rel.childColumn)
+            
+            if parent_table_name and child_table_name and parent_column_name and child_column_name:
+                ddl_statements.append(f"ALTER TABLE `{child_table_name}` "
+                                      f"ADD CONSTRAINT `FK_{child_table_name}_{parent_table_name}` "
+                                      f"FOREIGN KEY (`{child_column_name}`) "
+                                      f"REFERENCES `{parent_table_name}`(`{parent_column_name}`);")
+
+        return "\n\n".join(ddl_statements)
+    
+
+    @staticmethod
+    def generate_ddl_databricks(data):
+        ddl_statements = []
+
+        # Generate DDL for tables with primary key support
+        for table in data.tables:
+            create_statement = f"CREATE TABLE IF NOT EXISTS `{table.name}` (\n"
+            col_definitions = []
+            primary_keys = []
+            
+            for col in table.columns:
+                col_def = f"`{col.name}` {col.dataType}"
+                if col.maxLength and col.dataType.upper() == 'VARCHAR':
+                    col_def += f"({col.maxLength})"
+                elif col.precision and col.dataType.upper() in ['DECIMAL', 'NUMERIC', 'FLOAT']:
+                    col_def += f"({col.precision}, {col.scale if col.scale else 0})"
+                
+                col_definitions.append(col_def)
+                
+                if col.primaryKey:
+                    primary_keys.append(f"`{col.name}`")
+
+            # Add column definitions
+            create_statement += ",\n".join(col_definitions)
+
+            # Add primary key constraint if defined
+            if primary_keys:
+                create_statement += f",\nPRIMARY KEY ({', '.join(primary_keys)})"
+            
+            create_statement += f"\n)"
+
+            # Add table comment if exists
+            if table.description:
+                create_statement += f"\nCOMMENT '{table.description}'"
+            
+            ddl_statements.append(create_statement)
+
+            # Add column comments
+            for col in table.columns:
+                if col.description:
+                    ddl_statements.append(f"ALTER TABLE `{table.name}` CHANGE COLUMN `{col.name}` COMMENT '{col.description}';")
+
+        # Generate DDL for foreign key relationships
+        for rel in data.relationships:
+            parent_table_name, parent_column_name = DatabaseTechnologies.find_table_name_and_column_name_by_column_id(data, rel.parentColumn)
+            child_table_name, child_column_name = DatabaseTechnologies.find_table_name_and_column_name_by_column_id(data, rel.childColumn)
+            
+            if parent_table_name and child_table_name and parent_column_name and child_column_name:
+                ddl_statements.append(f"ALTER TABLE `{child_table_name}` ADD CONSTRAINT `fk_{child_table_name}_{parent_table_name}` FOREIGN KEY (`{child_column_name}`) REFERENCES `{parent_table_name}`(`{parent_column_name}`);")
+
+        return "\n\n".join(ddl_statements)
+    
+    @staticmethod
+    def find_table_name_and_column_name_by_column_id(data, column_id):
+        """
+        Find the table name and column name by the column's ID.
+
+        Args:
+        data: The database object containing tables and columns.
+        column_id: The ID of the column to find.
+
+        Returns:
+        A tuple of (table_name, column_name).
+        """
+        for table in data.tables:
+            for col in table.columns:
+                if col.id == column_id:
+                    return (table.name, col.name)
+        return (None, None)
