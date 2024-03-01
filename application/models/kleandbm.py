@@ -276,7 +276,7 @@ class DatabaseTechnologies:
                 col_def = f"    {col.name} {col.dataType}{auto_increment}"
                 if col.dataType.upper() == 'VARCHAR' and col.maxLength:
                     col_def += f"({col.maxLength})"
-                elif col.dataType.upper() in ['DECIMAL', 'NUMERIC', 'FLOAT'] and col.precision:
+                elif col.dataType.upper() in ['DECIMAL', 'NUMERIC', 'MONEY', 'SMALLMONEY', 'FLOAT', 'REAL'] and col.precision:
                     col_def += f"({col.precision}"
                     if col.scale:
                         col_def += f", {col.scale})"
@@ -338,7 +338,7 @@ class DatabaseTechnologies:
                 col_def = f"`{col.name}` {col.dataType}"
                 if col.dataType.upper() == 'VARCHAR' and col.maxLength:
                     col_def += f"({col.maxLength})"
-                elif col.dataType.upper() in ['DECIMAL', 'NUMERIC', 'FLOAT'] and col.precision:
+                elif col.dataType.upper() in ['DECIMAL', 'NUMERIC', 'FLOAT', 'DOUBLE'] and col.precision:
                     col_def += f"({col.precision}"
                     if col.scale:
                         col_def += f", {col.scale})"
@@ -392,7 +392,7 @@ class DatabaseTechnologies:
                 col_def = f"`{col.name}` {col.dataType}"
                 if col.maxLength and col.dataType.upper() == 'VARCHAR':
                     col_def += f"({col.maxLength})"
-                elif col.precision and col.dataType.upper() in ['DECIMAL', 'NUMERIC', 'FLOAT']:
+                elif col.precision and col.dataType.upper() in ['DECIMAL']:
                     col_def += f"({col.precision}, {col.scale if col.scale else 0})"
                 
                 col_definitions.append(col_def)
