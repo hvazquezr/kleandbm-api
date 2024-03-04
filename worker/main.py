@@ -16,8 +16,9 @@ celery.conf.update(
 
 # new_project cannot be ProjectCreate because it cannot be serialized
 @celery.task(name="create_project")
-def create_project(new_project):
-    result = ProjectService.create_project(ProjectCreate(**new_project))
+def create_project(new_project, user_payload):
+    print (user_payload)
+    result = ProjectService.create_project(ProjectCreate(**new_project), user_payload)
     return result
 
 @celery.task(name="generate_table_recommendations")

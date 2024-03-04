@@ -99,7 +99,7 @@ class ProjectType(str, Enum):
 
 class Owner(BaseModel):
     id: str
-    name: str
+    name: Optional[str] = None
 
 class ProjectHeader(BaseModel):
     id: str
@@ -134,7 +134,7 @@ class ProjectCreate(BaseModel):
     additionalInfo: Optional[str] = None
     namingRules: Optional[str] = None
     description: str
-    owner: Owner
+    owner: Optional[Owner] = None
 
 class ProjectUpdate(BaseModel):
     id: Optional[str] = None

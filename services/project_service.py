@@ -1,15 +1,25 @@
 import json
 from confluent_kafka import Producer
 from application.models.PromptGenerator import PromptGenerator
-from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, NodeUpdate, TableUpdate, RelationshipUpdate, SQLResponse, DatabaseTechnologies, DBTechnologyId
+from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, NodeUpdate, TableUpdate, RelationshipUpdate, SQLResponse, DatabaseTechnologies, Owner
 from application.config import get_settings
 import services.utils as services_utils
 from typing import List
+from fastapi import HTTPException
 
 
 class ProjectService:
     settings = get_settings()
     producer = Producer({'bootstrap.servers':settings.kafka_server})
+
+    @staticmethod
+    async def check_user_allowed(project_id, user_paylod):
+        project_query = "SELECT `owner` FROM PROJECTS WHERE `active`=true and `id`=\'" + project_id + "\';"
+        project = (await services_utils.async_query_ksql(ProjectService.settings.ksqldb_cluster, project_query))
+        if len(project) == 0:
+            raise HTTPException(status_code=404, detail="Project not found")
+        if project[0].get('owner').get('id') != user_paylod.get('sub'):
+            raise HTTPException(status_code=403, detail="User does not have access to this project.")
 
     ## The kafka methods are here and not in utils so that the producer is here and remains open for performance reasons
     @staticmethod
@@ -27,7 +37,7 @@ class ProjectService:
 
     # TODO: Change the return type to Project and handle that in Celeri
     @staticmethod
-    def create_project(new_project: ProjectCreate):
+    def create_project(new_project: ProjectCreate, user_payload):
         project_id = new_project.id
         system_message = PromptGenerator.get_create_project_sytem_prompt(new_project)
         user_message = PromptGenerator.get_create_project_user_prompt(new_project)
@@ -41,6 +51,7 @@ class ProjectService:
         nodes = services_utils.generate_nodes(suggested_data_model, project_id)
         
         new_project.description = suggested_data_model['description']
+        new_project.owner = Owner(id =  user_payload.get('sub'))
         ProjectService.kafka_produce('project-updates', project_id, new_project.model_dump_json(exclude_none=True))
         for table in suggested_data_model['tables']:
             ProjectService.kafka_produce('table-updates', project_id, json.dumps(table)) # Saving tables
@@ -54,14 +65,15 @@ class ProjectService:
         return suggested_data_model
     
     @staticmethod
-    async def get_projects() -> List[ProjectHeader]:
-        query = "SELECT * FROM PROJECTS WHERE `active`=true;" 
+    async def get_projects(user_paylod) -> List[ProjectHeader]:
+        query = "SELECT * FROM PROJECTS WHERE `active`=true and `owner`->`id` = \'" + user_paylod.get('sub') + "\';"
         projects_json = await services_utils.async_query_ksql(ProjectService.settings.ksqldb_cluster, query)
         response_list = [ProjectHeader(**p) for p in projects_json]
         return response_list
     
     @staticmethod
-    async def async_get_project(id) -> Project:
+    async def async_get_project(id, user_payload) -> Project:
+        await ProjectService.check_user_allowed(id, user_payload)
         result = None
         project_query = "SELECT * FROM PROJECTS WHERE `active`=true and `id`=\'" + id + "\';"
         project_dict = (await services_utils.async_query_ksql(ProjectService.settings.ksqldb_cluster, project_query))
@@ -97,44 +109,51 @@ class ProjectService:
         return result
 
     @staticmethod
-    async def update_project(id, updated_project) -> ProjectUpdate:
+    async def update_project(id, updated_project, user_payload) -> ProjectUpdate:
+        await ProjectService.check_user_allowed(id, user_payload)
         updated_project.id = id
         await ProjectService.async_kafka_produce('project-updates', id, updated_project.model_dump_json(exclude_none=True))
         return updated_project
     
     @staticmethod
-    async def delete_project(id):
+    async def delete_project(id, user_payload):
+        await ProjectService.check_user_allowed(id, user_payload)
         to_delete_project = ProjectUpdate(id = id, active=False)
         await ProjectService.async_kafka_produce('project-updates', id, to_delete_project.model_dump_json(exclude_none=True))
 
     @staticmethod
-    async def update_node(project_id, node_id, updated_node) -> NodeUpdate:
+    async def update_node(project_id, node_id, updated_node, user_payload) -> NodeUpdate:
+        await ProjectService.check_user_allowed(project_id, user_payload)
         updated_node.id = node_id
         await ProjectService.async_kafka_produce('node-updates', project_id, updated_node.model_dump_json(exclude_none=True))
         await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
         return updated_node
 
     @staticmethod
-    async def delete_node(project_id, node_id):
+    async def delete_node(project_id, node_id, user_payload):
+        await ProjectService.check_user_allowed(project_id, user_payload)
         to_delete_node = NodeUpdate(id = node_id, active=False)
         await ProjectService.async_kafka_produce('node-updates', project_id, to_delete_node.model_dump_json(exclude_none=True))
         await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
 
     @staticmethod
-    async def update_table(project_id, table_id, updated_table) -> TableUpdate:
+    async def update_table(project_id, table_id, updated_table, user_payload) -> TableUpdate:
+        await ProjectService.check_user_allowed(project_id, user_payload)
         updated_table.id = table_id
         await ProjectService.async_kafka_produce('table-updates', project_id, updated_table.model_dump_json(exclude_none=True))
         await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
         return updated_table
 
     @staticmethod
-    async def delete_table(project_id, table_id):
+    async def delete_table(project_id, table_id, user_payload):
+        await ProjectService.check_user_allowed(project_id, user_payload)
         to_delete_table = TableUpdate(id = table_id, active=False)
         await ProjectService.async_kafka_produce('table-updates', project_id, to_delete_table.model_dump_json(exclude_none=True))
         await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
 
     @staticmethod
-    async def update_relationship(project_id, relationship_id, updated_relationship) -> RelationshipUpdate:
+    async def update_relationship(project_id, relationship_id, updated_relationship, user_payload) -> RelationshipUpdate:
+        await ProjectService.check_user_allowed(project_id, user_payload)
         updated_relationship.projectId = project_id
         updated_relationship.id = relationship_id
         await ProjectService.async_kafka_produce('relationship-updates', project_id, updated_relationship.model_dump_json(exclude_none=True))
@@ -142,13 +161,15 @@ class ProjectService:
         return updated_relationship
 
     @staticmethod
-    async def delete_relationship(project_id, relationship_id):
+    async def delete_relationship(project_id, relationship_id, user_payload):
+        await ProjectService.check_user_allowed(project_id, user_payload)
         to_delete_relationship = RelationshipUpdate(id = relationship_id, active=False)
         await ProjectService.async_kafka_produce('relationship-updates', project_id, to_delete_relationship.model_dump_json(exclude_none=True))
         await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
 
     @staticmethod
-    async def get_project_sql(id):
+    async def get_project_sql(id, user_payload):
+        await ProjectService.check_user_allowed(id, user_payload)
         project = (await ProjectService.async_get_project(id))
         sql = DatabaseTechnologies.generate_ddl_sql(project)
         return SQLResponse(sql=sql).model_dump()
