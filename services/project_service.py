@@ -169,8 +169,7 @@ class ProjectService:
 
     @staticmethod
     async def get_project_sql(id, user_payload):
-        await ProjectService.check_user_allowed(id, user_payload)
-        project = (await ProjectService.async_get_project(id))
+        project = (await ProjectService.async_get_project(id, user_payload))
         sql = DatabaseTechnologies.generate_ddl_sql(project)
         return SQLResponse(sql=sql).model_dump()
     
