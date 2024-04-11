@@ -10,7 +10,14 @@ from fastapi import HTTPException
 
 class ProjectService:
     settings = get_settings()
-    producer = Producer({'bootstrap.servers':settings.kafka_server})
+
+    kafka_conf = {'bootstrap.servers': settings.kafka_server,
+            'security.protocol': 'SASL_SSL',
+            'sasl.mechanism': 'PLAIN',
+            'sasl.username': settings.kafka_username,
+            'sasl.password': settings.kafka_password}
+
+    producer = Producer(kafka_conf)
 
     @staticmethod
     async def check_user_allowed(project_id, user_paylod):
@@ -26,7 +33,14 @@ class ProjectService:
     def kafka_produce(topic, key, value):
         # Due to this celeri/kafka-python issue the producer has to be local when called from a celeri worker
         # https://github.com/dpkp/kafka-python/issues/1098
-        producer = Producer({'bootstrap.servers':ProjectService.settings.kafka_server})
+
+        kafka_conf = {'bootstrap.servers': ProjectService.settings.kafka_server,
+            'security.protocol': 'SASL_SSL',
+            'sasl.mechanism': 'PLAIN',
+            'sasl.username': ProjectService.settings.kafka_username,
+            'sasl.password': ProjectService.settings.kafka_password}
+
+        producer = Producer(kafka_conf)
         producer.produce(topic, key=key, value=value)
         producer.flush()
 
