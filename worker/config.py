@@ -6,7 +6,9 @@ from pathlib import Path
 class CelerySettings(BaseSettings):
     broker_url: str
     result_backend: str
-
+    result_db: str
+    result_collection: str
+    
     class Config:
         env_file = Path(__file__).parent / ".env"
 

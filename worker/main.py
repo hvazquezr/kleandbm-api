@@ -12,6 +12,10 @@ celery = Celery(__name__)
 celery.conf.update(
     broker_url=settings.broker_url,
     result_backend=settings.result_backend,
+    mongodb_backend_settings={
+        'database': settings.result_db,
+        'taskmeta_collection': settings.result_collection
+    }
 )
 
 # new_project cannot be ProjectCreate because it cannot be serialized

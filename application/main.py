@@ -1,7 +1,7 @@
 """Python FastAPI Auth0 integration example
 """
 
-from fastapi import FastAPI, Security, APIRouter, HTTPException, Response, status
+from fastapi import FastAPI, Security, APIRouter, HTTPException, Response, status, Header
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 
@@ -73,8 +73,8 @@ async def update_node(project_id: str, node_id:str, updated_node: NodeUpdate, au
     return (await ProjectService.update_node(project_id, node_id, updated_node, auth_result))
 
 @router.delete("/projects/{project_id}/nodes/{node_id}", status_code=204)
-async def delete_node(project_id: str, node_id: str, auth_result: str = Security(auth.verify)):
-    await ProjectService.delete_node(project_id, node_id, auth_result)
+async def delete_node(project_id: str, node_id: str, auth_result: str = Security(auth.verify), changeId: str = Header(None, alias="Change-Id")):
+    await ProjectService.delete_node(project_id, node_id, auth_result, changeId)
     return Response(status_code = status.HTTP_204_NO_CONTENT)
 
 @router.patch("/projects/{project_id}/tables/{table_id}", response_model= TableUpdate)
@@ -82,8 +82,8 @@ async def update_table(project_id: str, table_id:str, updated_table: TableUpdate
     return (await ProjectService.update_table(project_id, table_id, updated_table, auth_result))
 
 @router.delete("/projects/{project_id}/tables/{table_id}", status_code=204)
-async def delete_table(project_id: str, table_id: str, auth_result: str = Security(auth.verify)):
-    await ProjectService.delete_table(project_id, table_id, auth_result)
+async def delete_table(project_id: str, table_id: str, auth_result: str = Security(auth.verify), changeId: str = Header(None, alias="Change-Id")):
+    await ProjectService.delete_table(project_id, table_id, auth_result, changeId)
     return Response(status_code = status.HTTP_204_NO_CONTENT)
 
 @router.patch("/projects/{project_id}/relationships/{relationship_id}", response_model= RelationshipUpdate)
@@ -91,9 +91,17 @@ async def update_relationship(project_id: str, relationship_id: str, updated_rel
     return (await ProjectService.update_relationship(project_id, relationship_id, updated_relationship, auth_result))
 
 @router.delete("/projects/{project_id}/relationships/{relationship_id}", status_code=204)
-async def delete_relationship(project_id: str, relationship_id: str, auth_result: str = Security(auth.verify)):
-    await ProjectService.delete_relationship(project_id, relationship_id, auth_result)
-    return Response(status_code = status.HTTP_204_NO_CONTENT)
+async def delete_relationship(
+    project_id: str,
+    relationship_id: str,
+    auth_result: str = Security(auth.verify),
+    changeId: str = Header(None, alias="Change-Id")
+):
+    try:
+        await ProjectService.delete_relationship(project_id, relationship_id, auth_result, changeId)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/projects/{project_id}/sql", response_model=SQLResponse)
 async def get_project_sql(project_id: str, auth_result: str = Security(auth.verify)):

@@ -53,6 +53,7 @@ class ProjectService:
     @staticmethod
     def create_project(new_project: ProjectCreate, user_payload):
         project_id = new_project.id
+        changeId = new_project.changeId
         system_message = PromptGenerator.get_create_project_sytem_prompt(new_project)
         user_message = PromptGenerator.get_create_project_user_prompt(new_project)
         raw_data_model = json.loads(services_utils.prompt_openai(ProjectService.settings.openai_model, system_message, user_message))
@@ -68,12 +69,15 @@ class ProjectService:
         new_project.owner = Owner(id =  user_payload.get('sub'))
         ProjectService.kafka_produce('project-updates', project_id, new_project.model_dump_json(exclude_none=True))
         for table in suggested_data_model['tables']:
+            table['changeId'] = changeId
             ProjectService.kafka_produce('table-updates', project_id, json.dumps(table)) # Saving tables
 
         for relationship in suggested_data_model['relationships']:
+            relationship['changeId'] = changeId
             ProjectService.kafka_produce('relationship-updates', project_id, json.dumps(relationship)) # Saving relationsihps
 
         for node in nodes:
+            node['changeId'] = changeId
             ProjectService.kafka_produce('node-updates', project_id, json.dumps(node)) # Saving node
 
         return suggested_data_model
@@ -140,30 +144,30 @@ class ProjectService:
         await ProjectService.check_user_allowed(project_id, user_payload)
         updated_node.id = node_id
         await ProjectService.async_kafka_produce('node-updates', project_id, updated_node.model_dump_json(exclude_none=True))
-        await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
+        #await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
         return updated_node
 
     @staticmethod
-    async def delete_node(project_id, node_id, user_payload):
+    async def delete_node(project_id, node_id, user_payload, changeId):
         await ProjectService.check_user_allowed(project_id, user_payload)
-        to_delete_node = NodeUpdate(id = node_id, active=False)
+        to_delete_node = NodeUpdate(id = node_id, active=False, changeId = changeId)
         await ProjectService.async_kafka_produce('node-updates', project_id, to_delete_node.model_dump_json(exclude_none=True))
-        await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
+        #await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
 
     @staticmethod
     async def update_table(project_id, table_id, updated_table, user_payload) -> TableUpdate:
         await ProjectService.check_user_allowed(project_id, user_payload)
         updated_table.id = table_id
         await ProjectService.async_kafka_produce('table-updates', project_id, updated_table.model_dump_json(exclude_none=True))
-        await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
+        #await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
         return updated_table
 
     @staticmethod
-    async def delete_table(project_id, table_id, user_payload):
+    async def delete_table(project_id, table_id, user_payload, changeId):
         await ProjectService.check_user_allowed(project_id, user_payload)
-        to_delete_table = TableUpdate(id = table_id, active=False)
+        to_delete_table = TableUpdate(id = table_id, active=False, changeId = changeId)
         await ProjectService.async_kafka_produce('table-updates', project_id, to_delete_table.model_dump_json(exclude_none=True))
-        await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
+        #await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
 
     @staticmethod
     async def update_relationship(project_id, relationship_id, updated_relationship, user_payload) -> RelationshipUpdate:
@@ -171,15 +175,15 @@ class ProjectService:
         updated_relationship.projectId = project_id
         updated_relationship.id = relationship_id
         await ProjectService.async_kafka_produce('relationship-updates', project_id, updated_relationship.model_dump_json(exclude_none=True))
-        await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
+        #await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
         return updated_relationship
 
     @staticmethod
-    async def delete_relationship(project_id, relationship_id, user_payload):
+    async def delete_relationship(project_id, relationship_id, user_payload, changeId):
         await ProjectService.check_user_allowed(project_id, user_payload)
-        to_delete_relationship = RelationshipUpdate(id = relationship_id, active=False)
+        to_delete_relationship = RelationshipUpdate(id = relationship_id, active=False, changeId = changeId)
         await ProjectService.async_kafka_produce('relationship-updates', project_id, to_delete_relationship.model_dump_json(exclude_none=True))
-        await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
+        #await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
 
     @staticmethod
     async def get_project_sql(id, user_payload):

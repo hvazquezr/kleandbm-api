@@ -44,6 +44,7 @@ class TableUpdate(BaseModel):
     columns: Optional[List[Column]] = None
     lastModified: Optional[int] = None
     projectId: Optional[str] = None
+    changeId: str
 
 class Node(BaseModel):
     id: str
@@ -69,6 +70,7 @@ class NodeUpdate(BaseModel):
     height: Optional[float] = None
     x: Optional[float] = None
     y: Optional[float] = None
+    changeId: str
 
 class Relationship(BaseModel):
     id: str
@@ -86,6 +88,7 @@ class RelationshipUpdate(BaseModel):
     active: Optional[bool] = True
     identifying: Optional[bool] = None
     label: Optional[str] = None
+    changeId: str
 
 class DBTechnologyId(IntEnum):
     SNOWFLAKE = 1
@@ -134,6 +137,7 @@ class ProjectCreate(BaseModel):
     additionalInfo: Optional[str] = None
     namingRules: Optional[str] = None
     description: str
+    changeId: str
     owner: Optional[Owner] = None
 
 class ProjectUpdate(BaseModel):
@@ -141,6 +145,7 @@ class ProjectUpdate(BaseModel):
     active: Optional[bool] = True
     name: Optional[str] = None
     description: Optional[str] = None
+    changeId: str
 
 class DatabaseTechnology(BaseModel):
     id: DBTechnologyId
