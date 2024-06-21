@@ -1,74 +1,96 @@
-import json
 import re
-import requests
-import aiohttp
 from nanoid import generate
 from openai import OpenAI
 from application.config import get_settings
 import networkx as nx
 from enum import Enum
+from motor.motor_asyncio import AsyncIOMotorClient
 
 class ResponseType(str, Enum):
     JSON = "json"
     SQL = "sql"
 
-# To be used for requests to ksql but it's global for performance reasons
-session = aiohttp.ClientSession()
+# MongoDB Setup
+client = AsyncIOMotorClient(get_settings().mongo_uri)
+db = client[get_settings().mongo_db]
 
-# Formats replies from ksql in a more intuitive json format   
-def process_ksql_response(json_data):
-    # Extract the schema from the first element
-    schema_str = re.sub(r'<.*?>', '', json_data[0]['header']['schema'])
-    # Split the schema into individual columns and extract names
-    column_names = [col.split()[0].strip('`') for col in schema_str.split(',')]
+async def query_mongodb(collection_name, filter_query, projection=None):
+    """
+    Query a MongoDB collection and return the results.
+    
+    :param collection_name: The name of the collection to query
+    :param filter_query: The filter query to apply
+    :param projection: Optional projection to apply to the query
+    :return: A list of documents that match the query
+    """
+    # Ensure the collection exists
+    collection = db[collection_name]
+    
+    # Execute the query with optional projection
+    if projection:
+        results = collection.find(filter_query, projection)
+    else:
+        results = collection.find(filter_query)
+    
+    # Convert the results to a list
+    result_list = await results.to_list(length=None)
+    
+    return result_list
 
-    # Process each row
-    result = []
-    for item in json_data[1:]:
-        row_data = item['row']['columns']
-        # Map column names to row values
-        row_dict = dict(zip(column_names, row_data))
-        result.append(row_dict)
+async def get_project_with_children(project_id):
+    pipeline = [
+        {
+            '$match': {'_id': project_id, 'active': True}
+        },
+        {
+            '$lookup': {
+                'from': 'table',
+                'let': {'project_id': '$_id'},
+                'pipeline': [
+                    {'$match': {'$expr': {'$and': [{'$eq': ['$projectId', '$$project_id']}, {'$eq': ['$active', True]}]}}}
+                ],
+                'as': 'tables'
+            }
+        },
+        {
+            '$lookup': {
+                'from': 'node',
+                'let': {'project_id': '$_id'},
+                'pipeline': [
+                    {'$match': {'$expr': {'$and': [{'$eq': ['$projectId', '$$project_id']}, {'$eq': ['$active', True]}]}}}
+                ],
+                'as': 'nodes'
+            }
+        },
+        {
+            '$lookup': {
+                'from': 'relationship',
+                'let': {'project_id': '$_id'},
+                'pipeline': [
+                    {'$match': {'$expr': {'$and': [{'$eq': ['$projectId', '$$project_id']}, {'$eq': ['$active', True]}]}}}
+                ],
+                'as': 'relationships'
+            }
+        },
+        {
+            '$addFields': {
+                'id': '$_id'
+            }
+        },
+        {
+            '$project': {
+                '_id': 0,
+                'tables._id': 0,
+                'nodes._id': 0,
+                'relationships._id': 0
+            }
+        }
+    ]
+
+    result = await db['project'].aggregate(pipeline).to_list(length=None)
+    
     return result
 
-async def async_query_ksql(kdsqldb_cluster, ksql_query):
-    headers = {
-        'Content-Type': 'application/vnd.ksql.v1+json; charset=utf-8',
-        'Accept': 'application/json'
-    }
-    data = json.dumps({
-        'ksql': ksql_query,
-        'streamsProperties': {}
-    })
-
-    try:
-        # Use the provided session to make the HTTP request
-        async with session.post(kdsqldb_cluster + '/query', headers=headers, data=data, ssl=False) as response:
-            if response.status == 200:
-                return process_ksql_response(await response.json())
-            else:
-                print(f"Error querying ksqlDB: HTTP Status {response.status}")
-                return []
-    except Exception as e:
-        print(f"Error querying ksqlDB: {e}")
-        return []
-    
-def query_ksql(kdsqldb_cluster, ksql_query):
-    headers = {
-        'Content-Type': 'application/vnd.ksql.v1+json; charset=utf-8',
-        'Accept': 'application/json'
-    }
-    data = json.dumps({
-        'ksql': ksql_query,
-        'streamsProperties': {}
-    })
-
-    try:
-        query_response = requests.post(kdsqldb_cluster+'/query', headers=headers, data=data)
-        return process_ksql_response(query_response.json())
-    except Exception as e:
-        print(f"Error querying ksqlDB: {e}")
-        return []
 
 def clean_openai_response(response):
     # Check if the response contains SQL

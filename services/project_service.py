@@ -21,8 +21,16 @@ class ProjectService:
 
     @staticmethod
     async def check_user_allowed(project_id, user_paylod):
-        project_query = "SELECT `owner` FROM PROJECTS WHERE `active`=true and `id`=\'" + project_id + "\';"
-        project = (await services_utils.async_query_ksql(ProjectService.settings.ksqldb_cluster, project_query))
+        filter = {
+            'active': True, 
+            'owner.id': user_paylod.get('sub')
+        }
+        project={
+            'owner': 1, 
+            '_id': 0
+        }
+        project = await services_utils.query_mongodb('project', filter, project)
+
         if len(project) == 0:
             raise HTTPException(status_code=404, detail="Project not found")
         if project[0].get('owner').get('id') != user_paylod.get('sub'):
@@ -84,46 +92,25 @@ class ProjectService:
     
     @staticmethod
     async def get_projects(user_paylod) -> List[ProjectHeader]:
-        query = "SELECT * FROM PROJECTS WHERE `active`=true and `owner`->`id` = \'" + user_paylod.get('sub') + "\';"
-        projects_json = await services_utils.async_query_ksql(ProjectService.settings.ksqldb_cluster, query)
+        filter = {
+            'active': True, 
+            'owner.id': user_paylod.get('sub')
+        }
+        projects_json = await services_utils.query_mongodb('project', filter)
         response_list = [ProjectHeader(**p) for p in projects_json]
         return response_list
     
     @staticmethod
     async def async_get_project(id, user_payload) -> Project:
         await ProjectService.check_user_allowed(id, user_payload)
-        result = None
-        project_query = "SELECT * FROM PROJECTS WHERE `active`=true and `id`=\'" + id + "\';"
-        project_dict = (await services_utils.async_query_ksql(ProjectService.settings.ksqldb_cluster, project_query))
-        if len(project_dict) >= 1: #should be no more than 1
-            tables_query = "SELECT * FROM TABLES WHERE `active`=true and `projectId`=\'" + id + "\';"
-            relationships_query = "SELECT * FROM RELATIONSHIPS WHERE `active`=true and `projectId`=\'" + id + "\';"
-            nodes_query = "SELECT * FROM NODES WHERE `active`=true and `projectId`=\'" + id + "\';"
-            tables = await services_utils.async_query_ksql(ProjectService.settings.ksqldb_cluster, tables_query)
-            relationships = await services_utils.async_query_ksql(ProjectService.settings.ksqldb_cluster, relationships_query)
-            nodes = await services_utils.async_query_ksql(ProjectService.settings.ksqldb_cluster, nodes_query)
-            project_dict[0]['tables'] = tables
-            project_dict[0]['relationships'] = relationships
-            project_dict[0]['nodes'] = nodes
-            result = Project(**(project_dict[0]))
+        result_list = await services_utils.get_project_with_children(id)
+        result = Project(**(result_list[0]))
         return result
     
     @staticmethod
     def get_project(id) -> Project:
-        result = None
-        project_query = "SELECT * FROM PROJECTS WHERE `active`=true and `id`=\'" + id + "\';"
-        project_dict = services_utils.query_ksql(ProjectService.settings.ksqldb_cluster, project_query)
-        if len(project_dict) >= 1: #should be no more than 1
-            tables_query = "SELECT * FROM TABLES WHERE `active`=true and `projectId`=\'" + id + "\';"
-            relationships_query = "SELECT * FROM RELATIONSHIPS WHERE `active`=true and `projectId`=\'" + id + "\';"
-            nodes_query = "SELECT * FROM NODES WHERE `active`=true and `projectId`=\'" + id + "\';"
-            tables = services_utils.query_ksql(ProjectService.settings.ksqldb_cluster, tables_query)
-            relationships = services_utils.query_ksql(ProjectService.settings.ksqldb_cluster, relationships_query)
-            nodes = services_utils.query_ksql(ProjectService.settings.ksqldb_cluster, nodes_query)
-            project_dict[0]['tables'] = tables
-            project_dict[0]['relationships'] = relationships
-            project_dict[0]['nodes'] = nodes
-            result = Project(**(project_dict[0]))
+        result_list = services_utils.get_project_with_children(id)
+        result = Project(**(result_list[0]))
         return result
 
     @staticmethod

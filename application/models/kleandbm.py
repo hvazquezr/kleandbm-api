@@ -1,6 +1,8 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional, Any
 from enum import Enum, IntEnum
+from datetime import datetime
+
 
 class Job(BaseModel):
     jobId: str
@@ -33,7 +35,7 @@ class Table(BaseModel):
     description: str
     active: bool
     columns: List[Column]
-    lastModified: int
+    lastModified: datetime
     projectId: Optional[str] = None
 
 class TableUpdate(BaseModel):
@@ -42,7 +44,7 @@ class TableUpdate(BaseModel):
     description: Optional[str] = None
     active: Optional[bool] = None
     columns: Optional[List[Column]] = None
-    lastModified: Optional[int] = None
+    lastModified: Optional[datetime] = None
     projectId: Optional[str] = None
     changeId: str
 
@@ -51,7 +53,7 @@ class Node(BaseModel):
     projectId: Optional[str] = None
     type: Optional[NodeType] = None
     active: bool
-    lastModified: int
+    lastModified: datetime
     tableId: Optional[str] = None
     text: Optional[str] = None
     width: Optional[float] = None
@@ -105,14 +107,17 @@ class Owner(BaseModel):
     name: Optional[str] = None
 
 class ProjectHeader(BaseModel):
-    id: str
+    id: str = Field(valiation_alias='_id')
     name: str
     description: str
     dbTechnology: DBTechnologyId
     projectType: ProjectType
     active: bool
     owner: Owner
-    lastModified: int
+    lastModified: datetime
+
+    class Config:
+        extra = 'ignore'
 
 class Project(BaseModel):
     id: str
@@ -125,7 +130,7 @@ class Project(BaseModel):
     projectType: ProjectType
     active: bool
     owner: Owner
-    lastModified: int
+    lastModified: datetime
 
 class ProjectCreate(BaseModel):
     id: str
