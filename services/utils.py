@@ -73,8 +73,28 @@ async def get_project_with_children(project_id):
             }
         },
         {
+            '$lookup': {
+                'from': 'change',
+                'let': {'project_id': '$_id'},
+                'pipeline': [
+                    {'$match': {'$expr': {'$eq': ['$projectId', '$$project_id']}}},
+                    {'$sort': {'timestamp': -1}},
+                    {'$limit': 1},
+                    {
+                        '$project': {
+                            'id': '$_id',
+                            'timestamp': 1,
+                            'name': 1
+                        }
+                    }
+                ],
+                'as': 'lastChange'
+            }
+        },
+        {
             '$addFields': {
-                'id': '$_id'
+                'id': '$_id',
+                'lastChange': {'$arrayElemAt': ['$lastChange', 0]}
             }
         },
         {
@@ -82,13 +102,68 @@ async def get_project_with_children(project_id):
                 '_id': 0,
                 'tables._id': 0,
                 'nodes._id': 0,
-                'relationships._id': 0
+                'relationships._id': 0,
+                'lastChange._id': 0
             }
         }
     ]
 
     result = await db['project'].aggregate(pipeline).to_list(length=None)
     
+    return result
+
+async def get_projects_with_change(owner_id):
+    pipeline = [
+        {
+            '$match': {
+                'active': True,
+                'owner.id': owner_id
+            }
+        },
+        {
+            '$lookup': {
+                'from': 'change',
+                'let': {'project_id': '$_id'},
+                'pipeline': [
+                    {'$match': {'$expr': {'$eq': ['$projectId', '$$project_id']}}},
+                    {'$sort': {'timestamp': -1}},
+                    {'$limit': 1},
+                    {
+                        '$project': {
+                            'id': '$_id',
+                            'timestamp': 1,
+                            'name': 1,
+                            'description': 1,
+                            'dbTechnology': 1,
+                            'projectType': 1,
+                            'active': 1,
+                            'owner': 1
+                        }
+                    }
+                ],
+                'as': 'lastChange'
+            }
+        },
+        {
+            '$addFields': {
+                'lastChange': {'$arrayElemAt': ['$lastChange', 0]}
+            }
+        },
+        {
+            '$project': {
+                '_id': 0,
+                'id': '$_id',
+                'name': 1,
+                'description': 1,
+                'dbTechnology': 1,
+                'projectType': 1,
+                'active': 1,
+                'owner': 1,
+                'lastChange': 1
+            }
+        }
+    ]
+    result = await db['project'].aggregate(pipeline).to_list(length=None)
     return result
 
 

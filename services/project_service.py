@@ -1,7 +1,7 @@
 import json
 from confluent_kafka import Producer
 from application.models.PromptGenerator import PromptGenerator
-from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, NodeUpdate, TableUpdate, RelationshipUpdate, SQLResponse, DatabaseTechnologies, Owner
+from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, NodeUpdate, TableUpdate, RelationshipUpdate, SQLResponse, DatabaseTechnologies, Owner, ChangeUpdate
 from application.config import get_settings
 import services.utils as services_utils
 from typing import List
@@ -92,11 +92,7 @@ class ProjectService:
     
     @staticmethod
     async def get_projects(user_paylod) -> List[ProjectHeader]:
-        filter = {
-            'active': True, 
-            'owner.id': user_paylod.get('sub')
-        }
-        projects_json = await services_utils.query_mongodb('project', filter)
+        projects_json = await services_utils.get_projects_with_change(user_paylod.get('sub'))
         response_list = [ProjectHeader(**p) for p in projects_json]
         return response_list
     
@@ -200,3 +196,11 @@ class ProjectService:
         response = json.loads(openai_response)
         services_utils.generate_id_if_missing(response['columns'])
         return response
+
+    @staticmethod
+    async def update_change_name(project_id, change_id, updated_change, user_payload) -> ChangeUpdate:
+        await ProjectService.check_user_allowed(project_id, user_payload)
+        updated_change.projectId = project_id
+        updated_change.id = change_id
+        await ProjectService.async_kafka_produce('change-updates', project_id, updated_change.model_dump_json(exclude_none=True))
+        return updated_change

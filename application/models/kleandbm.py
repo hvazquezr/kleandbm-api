@@ -106,6 +106,19 @@ class Owner(BaseModel):
     id: str
     name: Optional[str] = None
 
+class Change(BaseModel):
+    id: str = Field(valiation_alias='_id')
+    timestamp: datetime
+    name: Optional[str] = None
+
+    class Config:
+        extra = 'ignore'
+
+class ChangeUpdate(BaseModel):
+    name: str
+    id: Optional[str] = None
+    projectId: Optional[str] = None
+
 class ProjectHeader(BaseModel):
     id: str = Field(valiation_alias='_id')
     name: str
@@ -114,7 +127,7 @@ class ProjectHeader(BaseModel):
     projectType: ProjectType
     active: bool
     owner: Owner
-    lastModified: datetime
+    lastChange: Change
 
     class Config:
         extra = 'ignore'
@@ -130,7 +143,10 @@ class Project(BaseModel):
     projectType: ProjectType
     active: bool
     owner: Owner
-    lastModified: datetime
+    changeId: str
+    lastChange: Change
+
+
 
 class ProjectCreate(BaseModel):
     id: str
