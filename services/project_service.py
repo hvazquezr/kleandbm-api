@@ -99,7 +99,7 @@ class ProjectService:
     @staticmethod
     async def async_get_project(id, user_payload) -> Project:
         await ProjectService.check_user_allowed(id, user_payload)
-        result_list = await services_utils.get_project_with_children(id)
+        result_list = await services_utils.async_get_project_with_children(id)
         result = Project(**(result_list[0]))
         return result
     

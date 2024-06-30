@@ -5,14 +5,20 @@ from application.config import get_settings
 import networkx as nx
 from enum import Enum
 from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import MongoClient
 
 class ResponseType(str, Enum):
     JSON = "json"
     SQL = "sql"
 
 # MongoDB Setup
-client = AsyncIOMotorClient(get_settings().mongo_uri)
+async_client = AsyncIOMotorClient(get_settings().mongo_uri)
+async_db = async_client[get_settings().mongo_db]
+
+client = MongoClient(get_settings().mongo_uri)
 db = client[get_settings().mongo_db]
+
+
 
 async def query_mongodb(collection_name, filter_query, projection=None):
     """
@@ -24,7 +30,7 @@ async def query_mongodb(collection_name, filter_query, projection=None):
     :return: A list of documents that match the query
     """
     # Ensure the collection exists
-    collection = db[collection_name]
+    collection = async_db[collection_name]
     
     # Execute the query with optional projection
     if projection:
@@ -37,7 +43,8 @@ async def query_mongodb(collection_name, filter_query, projection=None):
     
     return result_list
 
-async def get_project_with_children(project_id):
+
+def get_project_with_children(project_id):
     pipeline = [
         {
             '$match': {'_id': project_id, 'active': True}
@@ -108,7 +115,82 @@ async def get_project_with_children(project_id):
         }
     ]
 
-    result = await db['project'].aggregate(pipeline).to_list(length=None)
+    result = list(db['project'].aggregate(pipeline))
+    
+    return result
+
+async def async_get_project_with_children(project_id):
+    pipeline = [
+        {
+            '$match': {'_id': project_id, 'active': True}
+        },
+        {
+            '$lookup': {
+                'from': 'table',
+                'let': {'project_id': '$_id'},
+                'pipeline': [
+                    {'$match': {'$expr': {'$and': [{'$eq': ['$projectId', '$$project_id']}, {'$eq': ['$active', True]}]}}}
+                ],
+                'as': 'tables'
+            }
+        },
+        {
+            '$lookup': {
+                'from': 'node',
+                'let': {'project_id': '$_id'},
+                'pipeline': [
+                    {'$match': {'$expr': {'$and': [{'$eq': ['$projectId', '$$project_id']}, {'$eq': ['$active', True]}]}}}
+                ],
+                'as': 'nodes'
+            }
+        },
+        {
+            '$lookup': {
+                'from': 'relationship',
+                'let': {'project_id': '$_id'},
+                'pipeline': [
+                    {'$match': {'$expr': {'$and': [{'$eq': ['$projectId', '$$project_id']}, {'$eq': ['$active', True]}]}}}
+                ],
+                'as': 'relationships'
+            }
+        },
+        {
+            '$lookup': {
+                'from': 'change',
+                'let': {'project_id': '$_id'},
+                'pipeline': [
+                    {'$match': {'$expr': {'$eq': ['$projectId', '$$project_id']}}},
+                    {'$sort': {'timestamp': -1}},
+                    {'$limit': 1},
+                    {
+                        '$project': {
+                            'id': '$_id',
+                            'timestamp': 1,
+                            'name': 1
+                        }
+                    }
+                ],
+                'as': 'lastChange'
+            }
+        },
+        {
+            '$addFields': {
+                'id': '$_id',
+                'lastChange': {'$arrayElemAt': ['$lastChange', 0]}
+            }
+        },
+        {
+            '$project': {
+                '_id': 0,
+                'tables._id': 0,
+                'nodes._id': 0,
+                'relationships._id': 0,
+                'lastChange._id': 0
+            }
+        }
+    ]
+
+    result = await async_db['project'].aggregate(pipeline).to_list(length=None)
     
     return result
 
@@ -163,7 +245,7 @@ async def get_projects_with_change(owner_id):
             }
         }
     ]
-    result = await db['project'].aggregate(pipeline).to_list(length=None)
+    result = await async_db['project'].aggregate(pipeline).to_list(length=None)
     return result
 
 
