@@ -107,7 +107,7 @@ class Owner(BaseModel):
     name: Optional[str] = None
 
 class Change(BaseModel):
-    id: str = Field(valiation_alias='_id')
+    id: str = Field(validation_alias='_id')
     timestamp: datetime
     name: Optional[str] = None
 
@@ -118,6 +118,15 @@ class ChangeUpdate(BaseModel):
     name: str
     id: Optional[str] = None
     projectId: Optional[str] = None
+
+class ChangeDate(BaseModel):
+    year: int
+    month: int
+    day: int
+
+class ChangeList(BaseModel):
+    id: ChangeDate = Field(validation_alias='_id')
+    changes: List[Change]
 
 class ProjectHeader(BaseModel):
     id: str = Field(valiation_alias='_id')

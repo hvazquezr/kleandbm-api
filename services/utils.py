@@ -119,6 +119,49 @@ def get_project_with_children(project_id):
     
     return result
 
+async def async_get_project_changes(project_id):
+    pipeline = [
+        {
+            '$match': {
+            'projectId': project_id
+            }
+        },
+        {
+            '$sort': {
+            'timestamp': -1
+            }
+        },
+        {
+            '$group': {
+            '_id': {
+                'year': {
+                '$year': "$timestamp"
+                },
+                'month': {
+                '$month': "$timestamp"
+                },
+                'day': {
+                '$dayOfMonth': "$timestamp"
+                }
+            },
+            'changes': {
+                '$push': "$$ROOT"
+            }
+            }
+        },
+        {
+            '$sort': {
+            "_id.year": -1,
+            "_id.month": -1,
+            "_id.day": -1
+            }
+        }
+    ]
+
+    result = await async_db['change'].aggregate(pipeline).to_list(length=None)
+    
+    return result
+
 async def async_get_project_with_children(project_id):
     pipeline = [
         {
@@ -185,7 +228,7 @@ async def async_get_project_with_children(project_id):
                 'tables._id': 0,
                 'nodes._id': 0,
                 'relationships._id': 0,
-                'lastChange._id': 0
+                'lastChange.id': 0
             }
         }
     ]

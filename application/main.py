@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 
 from application.utils import VerifyToken
-from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, NodeUpdate,Job, JobResult, TableUpdate, RelationshipUpdate, AITablesUpdate, SQLResponse, ChangeUpdate
+from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, NodeUpdate,Job, JobResult, TableUpdate, RelationshipUpdate, AITablesUpdate, SQLResponse, ChangeUpdate, ChangeList
 from application.config import get_settings
 
 import worker.main as worker
@@ -58,6 +58,11 @@ async def get_project(project_id: str, auth_result: str = Security(auth.verify))
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
     return project
+
+@router.get("/projects/{project_id}/changes", response_model=List[ChangeList])
+async def get_project_changes(project_id: str, auth_result: str = Security(auth.verify)):
+    changes = await ProjectService.get_project_changes(project_id, auth_result)
+    return changes
 
 @router.patch("/projects/{project_id}", response_model=ProjectUpdate)
 async def update_project(project_id: str, updated_project: ProjectUpdate, auth_result: str = Security(auth.verify)):

@@ -1,7 +1,7 @@
 import json
 from confluent_kafka import Producer
 from application.models.PromptGenerator import PromptGenerator
-from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, NodeUpdate, TableUpdate, RelationshipUpdate, SQLResponse, DatabaseTechnologies, Owner, ChangeUpdate
+from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, NodeUpdate, TableUpdate, RelationshipUpdate, SQLResponse, DatabaseTechnologies, Owner, ChangeUpdate, ChangeList
 from application.config import get_settings
 import services.utils as services_utils
 from typing import List
@@ -108,6 +108,13 @@ class ProjectService:
         result_list = services_utils.get_project_with_children(id)
         result = Project(**(result_list[0]))
         return result
+
+    @staticmethod
+    async def get_project_changes(id, user_paylod) -> List[ChangeList]:
+        await ProjectService.check_user_allowed(id, user_paylod)
+        changes_json = await services_utils.async_get_project_changes(id)
+        response_list = [ChangeList(**p) for p in changes_json]
+        return response_list
 
     @staticmethod
     async def update_project(id, updated_project, user_payload) -> ProjectUpdate:
