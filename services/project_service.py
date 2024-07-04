@@ -23,7 +23,8 @@ class ProjectService:
     async def check_user_allowed(project_id, user_paylod):
         filter = {
             'active': True, 
-            'owner.id': user_paylod.get('sub')
+            'owner.id': user_paylod.get('sub'),
+            '_id': project_id
         }
         project={
             'owner': 1, 
