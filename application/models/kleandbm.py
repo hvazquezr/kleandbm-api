@@ -124,10 +124,6 @@ class ChangeDate(BaseModel):
     month: int
     day: int
 
-class ChangeList(BaseModel):
-    id: ChangeDate = Field(validation_alias='_id')
-    changes: List[Change]
-
 class ProjectHeader(BaseModel):
     id: str = Field(valiation_alias='_id')
     name: str
