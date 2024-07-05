@@ -20,7 +20,7 @@ db = client[get_settings().mongo_db]
 
 
 
-async def query_mongodb(collection_name, filter_query, projection=None):
+async def query_mongodb(collection_name, filter, projection=None, sort=None):
     """
     Query a MongoDB collection and return the results.
     
@@ -32,11 +32,7 @@ async def query_mongodb(collection_name, filter_query, projection=None):
     # Ensure the collection exists
     collection = async_db[collection_name]
     
-    # Execute the query with optional projection
-    if projection:
-        results = collection.find(filter_query, projection)
-    else:
-        results = collection.find(filter_query)
+    results = collection.find(filter = filter, sort = sort, projection = projection)
     
     # Convert the results to a list
     result_list = await results.to_list(length=None)
@@ -116,49 +112,6 @@ def get_project_with_children(project_id):
     ]
 
     result = list(db['project'].aggregate(pipeline))
-    
-    return result
-
-async def async_get_project_changes(project_id):
-    pipeline = [
-        {
-            '$match': {
-            'projectId': project_id
-            }
-        },
-        {
-            '$sort': {
-            'timestamp': -1
-            }
-        },
-        {
-            '$group': {
-            '_id': {
-                'year': {
-                '$year': "$timestamp"
-                },
-                'month': {
-                '$month': "$timestamp"
-                },
-                'day': {
-                '$dayOfMonth': "$timestamp"
-                }
-            },
-            'changes': {
-                '$push': "$$ROOT"
-            }
-            }
-        },
-        {
-            '$sort': {
-            "_id.year": -1,
-            "_id.month": -1,
-            "_id.day": -1
-            }
-        }
-    ]
-
-    result = await async_db['change'].aggregate(pipeline).to_list(length=None)
     
     return result
 

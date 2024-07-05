@@ -118,7 +118,11 @@ class ProjectService:
             'projectId': id
         }
 
-        changes_json = await services_utils.query_mongodb('change', filter)
+        sort = {
+            'timestamp': -1
+        }
+
+        changes_json = await services_utils.query_mongodb('change', filter = filter, sort = sort )
 
         response_list = [Change(**p) for p in changes_json]
         return response_list
@@ -216,5 +220,5 @@ class ProjectService:
         await ProjectService.check_user_allowed(project_id, user_payload)
         updated_change.projectId = project_id
         updated_change.id = change_id
-        await ProjectService.async_kafka_produce('change-updates', project_id, updated_change.model_dump_json(exclude_none=True))
+        await ProjectService.async_kafka_produce('change-updates', project_id, updated_change.model_dump_json(exclude_none=False))
         return updated_change

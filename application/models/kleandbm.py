@@ -115,7 +115,7 @@ class Change(BaseModel):
         extra = 'ignore'
 
 class ChangeUpdate(BaseModel):
-    name: str
+    name: Optional[str] = None
     id: Optional[str] = None
     projectId: Optional[str] = None
 
