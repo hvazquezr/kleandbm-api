@@ -64,6 +64,13 @@ async def get_project_changes(project_id: str, auth_result: str = Security(auth.
     changes = await ProjectService.get_project_changes(project_id, auth_result)
     return changes
 
+@router.get("/projects/{project_id}/bychange/{change_id}", response_model=Project)
+async def get_project_by_change(project_id: str, change_id: str, auth_result: str = Security(auth.verify)):
+    project = await ProjectService.async_get_project_by_change(project_id, change_id, auth_result)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return project
+
 @router.patch("/projects/{project_id}", response_model=ProjectUpdate)
 async def update_project(project_id: str, updated_project: ProjectUpdate, auth_result: str = Security(auth.verify)):
     return (await ProjectService.update_project(project_id, updated_project, auth_result))

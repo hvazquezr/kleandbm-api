@@ -190,6 +190,208 @@ async def async_get_project_with_children(project_id):
     
     return result
 
+async def async_get_project_by_change(project_id, change_id):
+    pipeline = [
+    {
+        '$match': {
+            '_id': change_id,
+            'projectId': project_id
+        }
+    }, {
+        '$lookup': {
+            'from': 'project_versions', 
+            'let': {
+                'changeTimestamp': '$timestamp', 
+                'changeProjectId': '$projectId'
+            }, 
+            'pipeline': [
+                {
+                    '$match': {
+                        '$expr': {
+                            '$and': [
+                                {
+                                    '$eq': [
+                                        '$id', '$$changeProjectId'
+                                    ]
+                                }, {
+                                    '$lte': [
+                                        '$lastModified', '$$changeTimestamp'
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                }, {
+                    '$sort': {
+                        'lastModified': -1
+                    }
+                }, {
+                    '$limit': 1
+                }
+            ], 
+            'as': 'projectVersion'
+        }
+    }, {
+        '$unwind': '$projectVersion'
+    }, {
+        '$lookup': {
+            'from': 'table_versions', 
+            'let': {
+                'projectId': '$projectVersion.id', 
+                'timestamp': '$timestamp'
+            }, 
+            'pipeline': [
+                {
+                    '$match': {
+                        '$expr': {
+                            '$and': [
+                                {
+                                    '$eq': [
+                                        '$projectId', '$$projectId'
+                                    ]
+                                }, {
+                                    '$lte': [
+                                        '$lastModified', '$$timestamp'
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                }, {
+                    '$sort': {
+                        'lastModified': -1
+                    }
+                }, {
+                    '$group': {
+                        '_id': '$id', 
+                        'latest': {
+                            '$first': '$$ROOT'
+                        }
+                    }
+                }, {
+                    '$replaceRoot': {
+                        'newRoot': '$latest'
+                    }
+                }, {
+                    '$match': {
+                        'active': True
+                    }
+                }
+            ], 
+            'as': 'tables'
+        }
+    }, {
+        '$lookup': {
+            'from': 'node_versions', 
+            'let': {
+                'projectId': '$projectVersion.id', 
+                'timestamp': '$timestamp'
+            }, 
+            'pipeline': [
+                {
+                    '$match': {
+                        '$expr': {
+                            '$and': [
+                                {
+                                    '$eq': [
+                                        '$projectId', '$$projectId'
+                                    ]
+                                }, {
+                                    '$lte': [
+                                        '$lastModified', '$$timestamp'
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                }, {
+                    '$sort': {
+                        'lastModified': -1
+                    }
+                }, {
+                    '$group': {
+                        '_id': '$id', 
+                        'latest': {
+                            '$first': '$$ROOT'
+                        }
+                    }
+                }, {
+                    '$replaceRoot': {
+                        'newRoot': '$latest'
+                    }
+                }, {
+                    '$match': {
+                        'active': True
+                    }
+                }
+            ], 
+            'as': 'nodes'
+        }
+    }, {
+        '$lookup': {
+            'from': 'relationship_versions', 
+            'let': {
+                'projectId': '$projectVersion.id', 
+                'timestamp': '$timestamp'
+            }, 
+            'pipeline': [
+                {
+                    '$match': {
+                        '$expr': {
+                            '$and': [
+                                {
+                                    '$eq': [
+                                        '$projectId', '$$projectId'
+                                    ]
+                                }, {
+                                    '$lte': [
+                                        '$lastModified', '$$timestamp'
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                }, {
+                    '$sort': {
+                        'lastModified': -1
+                    }
+                }, {
+                    '$group': {
+                        '_id': '$id', 
+                        'latest': {
+                            '$first': '$$ROOT'
+                        }
+                    }
+                }, {
+                    '$replaceRoot': {
+                        'newRoot': '$latest'
+                    }
+                }, {
+                    '$match': {
+                        'active': True
+                    }
+                }
+            ], 
+            'as': 'relationships'
+        }
+    }, {
+        '$addFields': {
+            'projectVersion.tables': '$tables', 
+            'projectVersion.nodes': '$nodes', 
+            'projectVersion.relationships': '$relationships', 
+            'projectVersion.lastChange': '$$ROOT'
+        }
+    }, {
+        '$replaceRoot': {
+            'newRoot': '$projectVersion'
+        }
+    }
+    ]
+
+    result = await async_db['change'].aggregate(pipeline).to_list(length=None)
+    
+    return result
+
 async def get_projects_with_change(owner_id):
     pipeline = [
         {

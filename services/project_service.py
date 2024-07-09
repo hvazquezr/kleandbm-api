@@ -109,6 +109,13 @@ class ProjectService:
         result_list = services_utils.get_project_with_children(id)
         result = Project(**(result_list[0]))
         return result
+    
+    @staticmethod
+    async def async_get_project_by_change(id, change_id, user_payload) -> Project:
+        await ProjectService.check_user_allowed(id, user_payload)
+        result_list = await services_utils.async_get_project_by_change(id, change_id)
+        result = Project(**(result_list[0]))
+        return result
 
     @staticmethod
     async def get_project_changes(id, user_paylod) -> List[Change]:
