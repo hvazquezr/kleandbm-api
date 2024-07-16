@@ -6,6 +6,7 @@ import networkx as nx
 from enum import Enum
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import MongoClient
+import copy
 
 class ResponseType(str, Enum):
     JSON = "json"
@@ -391,6 +392,61 @@ async def async_get_project_by_change(project_id, change_id):
     result = await async_db['change'].aggregate(pipeline).to_list(length=None)
     
     return result
+
+
+def replace_ids_and_remove_fields(obj, id_mapping, parent_key=None):
+    if isinstance(obj, dict):
+        # Check if the object is the 'owner' object
+        is_owner_object = parent_key == 'owner'
+        
+        if 'id' in obj and not is_owner_object:
+            new_id = generate()
+            id_mapping[obj['id']] = new_id
+            obj['id'] = new_id
+
+        for key, value in list(obj.items()):
+            if key == 'id' and is_owner_object:
+                continue  # Skip replacement for 'id' in 'owner'
+            elif key in ['changeId', 'lastModified', '_id']:
+                del obj[key]
+            elif key.endswith('Id') or key.endswith('Column'):
+                if value in id_mapping:
+                    obj[key] = id_mapping[value]
+            else:
+                replace_ids_and_remove_fields(value, id_mapping, key)
+    elif isinstance(obj, list):
+        for item in obj:
+            replace_ids_and_remove_fields(item, id_mapping)
+
+async def async_clone_project_by_change(project_id, change_id):
+    id_mapping = {}
+
+    project = await async_get_project_by_change(project_id, change_id)
+
+    cloned_data = copy.deepcopy(project[0])
+
+    # Remove top-level ChangeId and LastChange
+    cloned_data.pop('changeId', None)
+    cloned_data.pop('lastChange', None)
+    cloned_data.pop('_id', None)
+    
+    # Process tables first
+    for table in cloned_data.get('tables', []):
+        replace_ids_and_remove_fields(table, id_mapping)
+
+    # Process nodes next
+    for node in cloned_data.get('nodes', []):
+        replace_ids_and_remove_fields(node, id_mapping)
+
+    # Process relationships last
+    for relationship in cloned_data.get('relationships', []):
+        replace_ids_and_remove_fields(relationship, id_mapping)
+
+    # Process top-level object last to ensure all IDs are mapped
+    replace_ids_and_remove_fields(cloned_data, id_mapping)
+
+    return cloned_data
+
 
 async def get_projects_with_change(owner_id):
     pipeline = [

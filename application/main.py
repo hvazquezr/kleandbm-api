@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 
 from application.utils import VerifyToken
-from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, NodeUpdate,Job, JobResult, TableUpdate, RelationshipUpdate, AITablesUpdate, SQLResponse, ChangeUpdate, Change
+from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, NodeUpdate,Job, JobResult, TableUpdate, RelationshipUpdate, AITablesUpdate, SQLResponse, ChangeUpdate, Change, ProjectId, ChangeId
 from application.config import get_settings
 
 import worker.main as worker
@@ -137,5 +137,9 @@ async def generate_table_edit_with_ai(project_id: str, table_id: str, user_reque
 @router.patch("/projects/{project_id}/change/{change_id}", response_model= ChangeUpdate)
 async def update_change_name(project_id: str, change_id: str, updated_change: ChangeUpdate, auth_result: str = Security(auth.verify)):
     return (await ProjectService.update_change_name(project_id, change_id, updated_change, auth_result))
+
+@router.put("/projects/{project_id}/bychange/{change_id}", response_model= ProjectId)
+async def clone_project_by_change(project_id: str, change_id: str, new_change_id: ChangeId, auth_result: str = Security(auth.verify)):
+    return (await ProjectService.clone_project_by_change(project_id, change_id, new_change_id.changeId, auth_result))
     
 app.include_router(router)

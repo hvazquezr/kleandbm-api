@@ -1,7 +1,7 @@
 import json
 from confluent_kafka import Producer
 from application.models.PromptGenerator import PromptGenerator
-from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, NodeUpdate, TableUpdate, RelationshipUpdate, SQLResponse, DatabaseTechnologies, Owner, ChangeUpdate, Change
+from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, NodeUpdate, TableUpdate, RelationshipUpdate, SQLResponse, DatabaseTechnologies, Owner, ChangeUpdate, Change, ProjectId
 from application.config import get_settings
 import services.utils as services_utils
 from typing import List
@@ -229,3 +229,31 @@ class ProjectService:
         updated_change.id = change_id
         await ProjectService.async_kafka_produce('change-updates', project_id, updated_change.model_dump_json(exclude_none=False))
         return updated_change
+    
+    @staticmethod
+    async def clone_project_by_change(project_id, change_id, new_change_id, user_payload) -> ProjectId:
+        await ProjectService.check_user_allowed(project_id, user_payload)
+        cloned_project = (await services_utils.async_clone_project_by_change(project_id, change_id))
+        cloned_project_id = cloned_project['id']
+        top_level_project_data = {k: cloned_project[k] for k in cloned_project if k not in ['tables', 'nodes', 'relationships']}
+        top_level_project_data['changeId'] = new_change_id
+        top_level_project_data['_id'] = top_level_project_data['id']
+
+        await ProjectService.async_kafka_produce('project-updates', cloned_project_id, json.dumps(top_level_project_data))
+
+        for table in cloned_project.get('tables', []):
+            table['changeId'] = new_change_id
+            table['_id'] = table['id']
+            await ProjectService.async_kafka_produce('table-updates', cloned_project_id, json.dumps(table))
+
+        for node in cloned_project.get('nodes', []):
+            node['changeId'] = new_change_id
+            node['_id'] = node['id']
+            await ProjectService.async_kafka_produce('node-updates', cloned_project_id, json.dumps(node))
+
+        for relationship in cloned_project.get('relationships', []):
+            relationship['changeId'] = new_change_id
+            relationship['_id'] = relationship['id']
+            await ProjectService.async_kafka_produce('relationship-updates', cloned_project_id, json.dumps(relationship))
+
+        return ProjectId(id=cloned_project_id).model_dump()

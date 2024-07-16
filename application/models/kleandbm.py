@@ -151,7 +151,11 @@ class Project(BaseModel):
     changeId: str
     lastChange: Change
 
+class ProjectId(BaseModel):
+    id: str
 
+class ChangeId(BaseModel):
+    changeId: str
 
 class ProjectCreate(BaseModel):
     id: str
