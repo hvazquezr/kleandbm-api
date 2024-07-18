@@ -59,6 +59,11 @@ async def get_project(project_id: str, auth_result: str = Security(auth.verify))
         raise HTTPException(status_code=404, detail="Project not found")
     return project
 
+@router.get("/projects/{project_id}/heartbeat")
+async def get_project_hearbeat(project_id: str, auth_result: str = Security(auth.verify)):
+    await ProjectService.check_if_project_exists(project_id, auth_result)
+    return Response(status_code=204)
+
 @router.get("/projects/{project_id}/changes", response_model=List[Change])
 async def get_project_changes(project_id: str, auth_result: str = Security(auth.verify)):
     changes = await ProjectService.get_project_changes(project_id, auth_result)

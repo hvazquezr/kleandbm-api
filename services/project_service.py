@@ -36,6 +36,16 @@ class ProjectService:
             raise HTTPException(status_code=404, detail="Project not found")
         if project[0].get('owner').get('id') != user_paylod.get('sub'):
             raise HTTPException(status_code=403, detail="User does not have access to this project.")
+        
+    @staticmethod
+    async def check_if_project_exists(project_id, user_paylod):
+        filter = {
+            '_id': project_id,
+            'active': True
+        }
+        project = await services_utils.query_mongodb('project', filter)
+        if len(project) == 0:
+            raise HTTPException(status_code=404, detail="Project not found")
 
     ## The kafka methods are here and not in utils so that the producer is here and remains open for performance reasons
     @staticmethod
@@ -239,7 +249,6 @@ class ProjectService:
         top_level_project_data['changeId'] = new_change_id
         top_level_project_data['_id'] = top_level_project_data['id']
 
-        await ProjectService.async_kafka_produce('project-updates', cloned_project_id, json.dumps(top_level_project_data))
 
         for table in cloned_project.get('tables', []):
             table['changeId'] = new_change_id
@@ -255,5 +264,7 @@ class ProjectService:
             relationship['changeId'] = new_change_id
             relationship['_id'] = relationship['id']
             await ProjectService.async_kafka_produce('relationship-updates', cloned_project_id, json.dumps(relationship))
+
+        await ProjectService.async_kafka_produce('project-updates', cloned_project_id, json.dumps(top_level_project_data))
 
         return ProjectId(id=cloned_project_id).model_dump()
