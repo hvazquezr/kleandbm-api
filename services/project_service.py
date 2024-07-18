@@ -248,6 +248,7 @@ class ProjectService:
         top_level_project_data = {k: cloned_project[k] for k in cloned_project if k not in ['tables', 'nodes', 'relationships']}
         top_level_project_data['changeId'] = new_change_id
         top_level_project_data['_id'] = top_level_project_data['id']
+        top_level_project_data['owner'] = {'id': user_payload.get('sub')}
 
 
         for table in cloned_project.get('tables', []):

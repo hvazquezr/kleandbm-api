@@ -396,18 +396,14 @@ async def async_get_project_by_change(project_id, change_id):
 
 def replace_ids_and_remove_fields(obj, id_mapping, parent_key=None):
     if isinstance(obj, dict):
-        # Check if the object is the 'owner' object
-        is_owner_object = parent_key == 'owner'
-        
-        if 'id' in obj and not is_owner_object:
+
+        if 'id' in obj:
             new_id = generate()
             id_mapping[obj['id']] = new_id
             obj['id'] = new_id
 
         for key, value in list(obj.items()):
-            if key == 'id' and is_owner_object:
-                continue  # Skip replacement for 'id' in 'owner'
-            elif key in ['changeId', 'lastModified', '_id']:
+            if key in ['changeId', 'lastModified', '_id', 'owner']:
                 del obj[key]
             elif key.endswith('Id') or key.endswith('Column'):
                 if value in id_mapping:
