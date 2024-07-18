@@ -246,6 +246,7 @@ class ProjectService:
         cloned_project = (await services_utils.async_clone_project_by_change(project_id, change_id))
         cloned_project_id = cloned_project['id']
         top_level_project_data = {k: cloned_project[k] for k in cloned_project if k not in ['tables', 'nodes', 'relationships']}
+        top_level_project_data['name'] = top_level_project_data['name'] + " Copy"
         top_level_project_data['changeId'] = new_change_id
         top_level_project_data['_id'] = top_level_project_data['id']
         top_level_project_data['owner'] = {'id': user_payload.get('sub')}
