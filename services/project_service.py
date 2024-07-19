@@ -38,9 +38,10 @@ class ProjectService:
             raise HTTPException(status_code=403, detail="User does not have access to this project.")
         
     @staticmethod
-    async def check_if_project_exists(project_id, user_paylod):
+    async def check_if_project_exists(project_id, change_id, user_paylod):
         filter = {
             '_id': project_id,
+            'changeId': change_id,
             'active': True
         }
         project = await services_utils.query_mongodb('project', filter)
@@ -270,3 +271,44 @@ class ProjectService:
         await ProjectService.async_kafka_produce('project-updates', cloned_project_id, json.dumps(top_level_project_data))
 
         return ProjectId(id=cloned_project_id).model_dump()
+    
+    @staticmethod
+    async def restore_project_by_change(project_id, change_id, new_change_id, user_payload) -> ProjectId:
+        async def deactivate_missing_items(topic, current_items, previous_items):
+            previous_ids = {item['id'] for item in previous_items}
+            for item in current_items:
+                if item['id'] not in previous_ids:
+                    await ProjectService.async_kafka_produce(topic, project_id, json.dumps({'id': item['id'], 'active': False, 'changeId':  new_change_id}))
+
+        async def persist_collections(topic, previous_items):
+            for prev_item in previous_items:
+                prev_item['changeId'] = new_change_id
+                prev_item['_id'] = prev_item['id']
+                del prev_item['lastModified']
+                await ProjectService.async_kafka_produce(topic, project_id, json.dumps(prev_item))
+
+
+        await ProjectService.check_user_allowed(project_id, user_payload)
+        previous_version = (await services_utils.async_get_project_by_change(project_id, change_id))[0]
+        current_version = (await services_utils.async_get_project_with_children(project_id))[0]
+
+        top_level_project_data = {k: previous_version[k] for k in previous_version if k not in ['tables', 'nodes', 'relationships']}
+        top_level_project_data['changeId'] = new_change_id
+        top_level_project_data['_id'] = top_level_project_data['id']
+        top_level_project_data['owner'] = {'id': user_payload.get('sub')}
+        del top_level_project_data['lastModified']
+        del top_level_project_data['lastChange']
+
+        # Deactivate missing tables, nodes, and relationships
+        await deactivate_missing_items('table-updates', current_version['tables'], previous_version['tables'])
+        await deactivate_missing_items('node-updates', current_version['nodes'], previous_version['nodes'])
+        await deactivate_missing_items('relationship-updates', current_version['relationships'], previous_version['relationships'])
+
+        # Persist previous version items
+        await persist_collections('table-updates', previous_version['tables'])
+        await persist_collections('node-updates', previous_version['nodes'])
+        await persist_collections('relationship-updates', previous_version['relationships'])
+
+        await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps(top_level_project_data))
+
+        return ProjectId(id=project_id).model_dump()

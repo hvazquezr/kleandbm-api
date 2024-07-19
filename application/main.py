@@ -59,9 +59,9 @@ async def get_project(project_id: str, auth_result: str = Security(auth.verify))
         raise HTTPException(status_code=404, detail="Project not found")
     return project
 
-@router.get("/projects/{project_id}/heartbeat")
-async def get_project_hearbeat(project_id: str, auth_result: str = Security(auth.verify)):
-    await ProjectService.check_if_project_exists(project_id, auth_result)
+@router.get("/projects/{project_id}/heartbeat/{change_id}")
+async def get_project_hearbeat(project_id: str, change_id: str, auth_result: str = Security(auth.verify)):
+    await ProjectService.check_if_project_exists(project_id, change_id, auth_result)
     return Response(status_code=204)
 
 @router.get("/projects/{project_id}/changes", response_model=List[Change])
@@ -143,8 +143,12 @@ async def generate_table_edit_with_ai(project_id: str, table_id: str, user_reque
 async def update_change_name(project_id: str, change_id: str, updated_change: ChangeUpdate, auth_result: str = Security(auth.verify)):
     return (await ProjectService.update_change_name(project_id, change_id, updated_change, auth_result))
 
-@router.put("/projects/{project_id}/bychange/{change_id}", response_model= ProjectId)
+@router.put("/projects/{project_id}/copy/{change_id}", response_model= ProjectId)
 async def clone_project_by_change(project_id: str, change_id: str, new_change_id: ChangeId, auth_result: str = Security(auth.verify)):
     return (await ProjectService.clone_project_by_change(project_id, change_id, new_change_id.changeId, auth_result))
+
+@router.put("/projects/{project_id}/restore/{change_id}", response_model= ProjectId)
+async def restore_project_by_change(project_id: str, change_id: str, new_change_id: ChangeId, auth_result: str = Security(auth.verify)):
+    return (await ProjectService.restore_project_by_change(project_id, change_id, new_change_id.changeId, auth_result))
     
 app.include_router(router)
