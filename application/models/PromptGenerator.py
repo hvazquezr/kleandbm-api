@@ -24,7 +24,7 @@ class PromptGenerator:
         if  new_project.projectType == ProjectType.ANALYTICAL:
             model_type = "a denormalized model"
             type_2_dimension = "If Type 2 dimension is needed include a surrogate key; this surrogage key should be used for linking to other tables. Natural business keys should default to an integer-like data type.\n\n\
-Fact tables should not have a record id; the ids from the dimensions should be sufficient.\n\n"
+Fact tables should not have a record id or primary keys; the ids from the dimensions should be sufficient.\n\n"
         return PromptGenerator.get_prompt("createProjectSystemMessage", project_type = new_project.projectType.value, \
                                                                         db_technology_name = database_technology.name, \
                                                                         model_type = model_type, \
