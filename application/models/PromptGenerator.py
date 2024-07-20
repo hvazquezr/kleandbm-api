@@ -74,3 +74,11 @@ Fact tables should not have a record id or primary keys; the ids from the dimens
                                           data_types = (", ".join(database_technology.dataTypes)), \
                                           reference_structure=structure, \
                                           table_structure = json.dumps(table_structure))
+    
+    @staticmethod
+    def get_update_naming_rules_system_prompt():
+        return PromptGenerator.get_prompt("updateNamingRulesSytemMessage")
+    
+    @staticmethod
+    def get_update_naming_rules_user_prompt(naming_rules, tables_array):
+        return PromptGenerator.get_prompt("updateNamingRulesUserMessage", naming_rules = naming_rules, tables_array=tables_array)

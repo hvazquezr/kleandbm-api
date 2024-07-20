@@ -41,6 +41,46 @@ async def query_mongodb(collection_name, filter, projection=None, sort=None):
     return result_list
 
 
+def lean_table_attributes(tables):
+    preserved_tables = []
+    for table in tables:
+        preserved_table = {
+            'id': table.id,
+            'name': table.name,
+            'description': table.description,
+            'columns': []
+        }
+        for column in table.columns:
+            preserved_column = {
+                'id': column.id,
+                'name': column.name,
+                'description': column.description
+            }
+            preserved_table['columns'].append(preserved_column)
+        preserved_tables.append(preserved_table)
+    return preserved_tables
+
+def update_table_names(full_tables, preserved_tables):
+    preserved_dict = {table['id']: table for table in preserved_tables}
+    
+    for table in full_tables:
+        preserved_table = preserved_dict.get(table.id)
+        if preserved_table:
+            # Update table attributes
+            table.name = preserved_table.get('name', table.name)
+            table.description = preserved_table.get('description', table.description)
+            
+            preserved_columns_dict = {col['id']: col for col in preserved_table.get('columns', [])}
+            
+            for column in table.columns:
+                preserved_column = preserved_columns_dict.get(column.id)
+                if preserved_column:
+                    # Update column attributes
+                    column.name = preserved_column.get('name', column.name)
+                    column.description = preserved_column.get('description', column.description)
+    
+    return full_tables
+
 def get_project_with_children(project_id):
     pipeline = [
         {
@@ -107,7 +147,7 @@ def get_project_with_children(project_id):
                 'tables._id': 0,
                 'nodes._id': 0,
                 'relationships._id': 0,
-                'lastChange._id': 0
+                'lastChange.id': 0
             }
         }
     ]

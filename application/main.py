@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 
 from application.utils import VerifyToken
-from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, NodeUpdate,Job, JobResult, TableUpdate, RelationshipUpdate, AITablesUpdate, SQLResponse, ChangeUpdate, Change, ProjectId, ChangeId
+from application.models.kleandbm import Project, ProjectHeader, ProjectCreate, ProjectUpdate, NodeUpdate,Job, JobResult, TableUpdate, RelationshipUpdate, AITablesUpdate, SQLResponse, ChangeUpdate, Change, ProjectId, ChangeId, NamingRulesUpdate
 from application.config import get_settings
 
 import worker.main as worker
@@ -32,6 +32,13 @@ auth = VerifyToken()
 @router.post("/projects", response_model=Job, status_code=202)
 async def create_project(new_project: ProjectCreate, response: Response, auth_result: str = Security(auth.verify)):
     job = worker.create_project.delay(new_project.model_dump(exclude_none=True), auth_result)
+    response.status_code = status.HTTP_202_ACCEPTED
+    return {"jobId": job.id}
+
+@router.post("/projects/{project_id}/apply_naming_rules", response_model=Job, status_code=202)
+async def create_project(project_id: str, updated_naming_rules: NamingRulesUpdate, response: Response, auth_result: str = Security(auth.verify)):
+    await ProjectService.check_user_allowed(project_id, auth_result)
+    job = worker.update_naming_rules.delay(project_id, updated_naming_rules.model_dump(exclude_none=True))
     response.status_code = status.HTTP_202_ACCEPTED
     return {"jobId": job.id}
 

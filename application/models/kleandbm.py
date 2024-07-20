@@ -137,6 +137,10 @@ class ProjectHeader(BaseModel):
     class Config:
         extra = 'ignore'
 
+class NamingRulesUpdate(BaseModel):
+    namingRules: str
+    changeId: str
+
 class Project(BaseModel):
     id: str
     name: str
@@ -146,6 +150,7 @@ class Project(BaseModel):
     nodes: List[Node]
     dbTechnology: DBTechnologyId
     projectType: ProjectType
+    namingRules: Optional[str] = None
     active: bool
     owner: Owner
     changeId: str

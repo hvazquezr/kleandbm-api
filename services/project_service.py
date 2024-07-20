@@ -232,6 +232,31 @@ class ProjectService:
         response = json.loads(openai_response)
         services_utils.generate_id_if_missing(response['columns'])
         return response
+    
+    # Cannot be async because it will be used as Celeri
+    # TODO: Finish this call
+    # Send to OpenAI the list of tables and relationships to ask to change according to new rules
+    # Update the list of tables in mongodb for name and description
+    @staticmethod
+    def update_naming_rules(id, user_request):
+        project = ProjectService.get_project(id)
+        change_id = user_request['changeId']
+        naming_rules = user_request['namingRules']
+        system_message = PromptGenerator.get_update_naming_rules_system_prompt()
+        user_message = PromptGenerator.get_update_naming_rules_user_prompt(naming_rules, services_utils.lean_table_attributes(project.tables))
+        openai_response = services_utils.prompt_openai(ProjectService.settings.openai_model, system_message, user_message)
+        renamed_tables = json.loads(openai_response)
+        updated_tables = services_utils.update_table_names(project.tables, renamed_tables)
+        updated_tables_dict = [table.model_dump() for table in updated_tables]
+        # Iterate through the updated_tables and save them
+        for table in updated_tables_dict:
+            table['changeId'] = change_id
+            del table['lastModified']
+            ProjectService.kafka_produce('table-updates', id, json.dumps(table))
+        
+        ProjectService.kafka_produce('project-updates', id, json.dumps({'id':id, 'namingRules': naming_rules, 'changeId': change_id}))
+        # Then find a way to return the project
+        return renamed_tables
 
     @staticmethod
     async def update_change_name(project_id, change_id, updated_change, user_payload) -> ChangeUpdate:

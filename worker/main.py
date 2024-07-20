@@ -34,3 +34,8 @@ def generate_table_recommendations(project_id, prompt, position):
 def generate_table_edits(project_id, user_request):
     result = ProjectService.generate_ai_table_edits(project_id, user_request)
     return result
+
+@celery.task(name="update_naming_rules")
+def update_naming_rules(project_id, user_request):
+    result = ProjectService.update_naming_rules(project_id, user_request)
+    return result
