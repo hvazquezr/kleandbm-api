@@ -1,7 +1,7 @@
 OPENAI_PROMPT_TEMPLATES = {
     'updateNamingRulesSytemMessage': "Act as a data architect. You will receive a json array of tables with name and description. It will also contain an array of \
-columns. Also you will receive a series of naming rules. Return the same jason array but with the names and descriptions adjusted to the new naming \
-rules.",
+columns. Also you will receive a series of naming rules. Return a jason array with the names and descriptions adjusted to the new naming \
+rules. Ensure the json array is wrapped with ```json at the beginning and end of the array and ``` at the end of the array.",
     'updateNamingRulesUserMessage': " \nTables: {tables_array} \nNaming rules:{naming_rules}",
     'createProjectSystemMessage': "Act as a data architect. Design a relational database and provide a project \
 description for a {project_type} database in {db_technology_name} (Don't include the name of the technology in the description)\
