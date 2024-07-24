@@ -15,8 +15,6 @@ Only include the json array and not additional context.",
 Adhere to the following naming rules: {naming_rules}\n\n\
 Also consider the following information:\n{additional_info}",
 
-    'generateSqlPrompt': "Act as an expert sql programmer and data architect. The following is a json representation of a database model for {db_technology_name}. Generate the SQL  DDL code to generate these objects. Infere relationships by referencing childColumn and parentColumn in the relationship elements. Do not include any commentary or explanation,  exclusively just the code and comments within it.",
-
     'suggestNewTablesPrompt': "Act as an expert sql programmer and data architect. You will be provided a json representation of a database model for {db_technology_name}, instructions to create a new table, or set of new tables to complement this model. Provide the structure for these tables in a json array referencing the json structure below. Do not include any commentary or explanation. \nConsider the following data types: {data_types}",
 
     'editTablePrompt': "Act as an expert sql programmer and data architect. You will be provided a json representation of a table for {db_technology_name} and instructions to modify the table structure or description. Provide the structure for suggested modified table in a json object referencing {reference_structure}. Newly added columns should not have the id attribute.\n\

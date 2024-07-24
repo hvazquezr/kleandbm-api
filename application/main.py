@@ -127,9 +127,9 @@ async def delete_relationship(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/projects/{project_id}/sql", response_model=SQLResponse)
-async def get_project_sql(project_id: str, auth_result: str = Security(auth.verify)):
-    return (await ProjectService.get_project_sql(project_id, auth_result))
+@router.get("/projects/{project_id}/sql/{change_id}", response_model=SQLResponse)
+async def get_project_sql(project_id: str, change_id: str, auth_result: str = Security(auth.verify)):
+    return (await ProjectService.get_project_sql(project_id, change_id, auth_result))
 
 
 @router.post("/projects/{project_id}/aisuggestedtables", response_model=Job)

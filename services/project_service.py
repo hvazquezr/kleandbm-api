@@ -205,8 +205,8 @@ class ProjectService:
         #await ProjectService.async_kafka_produce('project-updates', project_id, json.dumps({'id': project_id})) # Touching project to update lastmodified
 
     @staticmethod
-    async def get_project_sql(id, user_payload):
-        project = (await ProjectService.async_get_project(id, user_payload))
+    async def get_project_sql(id, change_id, user_payload):
+        project = (await ProjectService.async_get_project_by_change(id, change_id, user_payload))
         sql = DatabaseTechnologies.generate_ddl_sql(project)
         return SQLResponse(sql=sql).model_dump()
     

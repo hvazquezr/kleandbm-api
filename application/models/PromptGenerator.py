@@ -45,11 +45,6 @@ Fact tables should not have a record id or primary keys; the ids from the dimens
                                                                         additional_info = additional_info)
 
     @staticmethod
-    def get_sql_system_prompt(project: Project):
-        database_technology = DatabaseTechnologies.get_technology_by_id(project.dbTechnology)
-        return PromptGenerator.get_prompt("generateSqlPrompt", db_technology_name = database_technology.name)
-
-    @staticmethod
     def get_sql_user_prompt(project: Project):
         return project.model_dump_json()
 
